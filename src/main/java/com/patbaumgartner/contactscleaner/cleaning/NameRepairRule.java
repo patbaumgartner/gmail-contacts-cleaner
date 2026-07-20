@@ -46,7 +46,7 @@ final class NameRepairRule implements VCardCleaningRule {
 	@Override
 	public boolean apply(VCard vcard) {
 		boolean changed = false;
-		changed |= stripWrappingQuotes(vcard);
+		changed |= sanitizeNames(vcard);
 		changed |= rescueEmailsFromNameFields(vcard);
 		changed |= repairCommaFormattedDisplayName(vcard);
 		changed |= repairAllCapsComponents(vcard);
@@ -54,41 +54,71 @@ final class NameRepairRule implements VCardCleaningRule {
 		return changed;
 	}
 
-	// ── Quoted names ──────────────────────────────────────────────────────────
+	// ── Name sanitization: quotes, emojis, whitespace ─────────────────────────
 
-	private static final Pattern WRAPPING_QUOTES = Pattern
-		.compile("^\\s*[\"'\u201c\u201d\u2018\u2019\u00ab\u00bb]+(.*?)[\"'\u201c\u201d\u2018\u2019\u00ab\u00bb]+\\s*$");
+	/**
+	 * Quote characters stripped from name boundaries (straight, typographic, guillemets).
+	 */
+	private static final Pattern BOUNDARY_QUOTES = Pattern
+		.compile("^[\\s\"'\u201c\u201d\u2018\u2019\u00ab\u00bb`´]+|[\\s\"'\u201c\u201d\u2018\u2019\u00ab\u00bb`´]+$");
 
-	/** {@code "Jane Doe"} → {@code Jane Doe} — on FN, given and family alike. */
-	private boolean stripWrappingQuotes(VCard vcard) {
+	/**
+	 * Emojis and other symbols that do not belong in a name: symbol characters (includes
+	 * all pictographs), invisible format characters (ZWJ, bidi marks), variation
+	 * selectors and skin-tone modifiers.
+	 */
+	private static final Pattern NAME_NOISE = Pattern
+		.compile("[\\p{So}\\p{Cf}\\uFE0E\\uFE0F\\u20E3]|[\\uD83C\\uDFFB-\\uD83C\\uDFFF]");
+
+	/**
+	 * Cleans every name component: strips boundary quotes (also one-sided strays),
+	 * removes emojis and invisible format characters, collapses whitespace and trims.
+	 * Inner quotes ({@code Patrick "Pat" Miller}) are preserved; a component that would
+	 * end up empty keeps its original value.
+	 */
+	private boolean sanitizeNames(VCard vcard) {
 		boolean changed = false;
 		FormattedName formatted = vcard.getFormattedName();
 		if (formatted != null && formatted.getValue() != null) {
-			String unquoted = unquote(formatted.getValue());
-			if (!unquoted.equals(formatted.getValue())) {
-				formatted.setValue(unquoted);
+			String sanitized = sanitize(formatted.getValue());
+			if (!sanitized.equals(formatted.getValue())) {
+				formatted.setValue(sanitized);
 				changed = true;
 			}
 		}
 		StructuredName name = vcard.getStructuredName();
 		if (name != null) {
-			if (name.getGiven() != null && !unquote(name.getGiven()).equals(name.getGiven())) {
-				name.setGiven(unquote(name.getGiven()));
+			if (name.getGiven() != null && !sanitize(name.getGiven()).equals(name.getGiven())) {
+				name.setGiven(sanitize(name.getGiven()));
 				changed = true;
 			}
-			if (name.getFamily() != null && !unquote(name.getFamily()).equals(name.getFamily())) {
-				name.setFamily(unquote(name.getFamily()));
+			if (name.getFamily() != null && !sanitize(name.getFamily()).equals(name.getFamily())) {
+				name.setFamily(sanitize(name.getFamily()));
+				changed = true;
+			}
+			changed |= sanitizeList(name.getAdditionalNames());
+			changed |= sanitizeList(name.getPrefixes());
+			changed |= sanitizeList(name.getSuffixes());
+		}
+		return changed;
+	}
+
+	private boolean sanitizeList(List<String> values) {
+		boolean changed = false;
+		for (int i = 0; i < values.size(); i++) {
+			String value = values.get(i);
+			if (value != null && !sanitize(value).equals(value)) {
+				values.set(i, sanitize(value));
 				changed = true;
 			}
 		}
 		return changed;
 	}
 
-	private String unquote(String value) {
-		var matcher = WRAPPING_QUOTES.matcher(value);
-		String result = matcher.matches() ? matcher.group(1).trim() : value;
-		// Only strip when the result is a plausible name — never leave it empty,
-		// and keep names with a legitimate inner quote (nicknames handled below).
+	private String sanitize(String value) {
+		String result = NAME_NOISE.matcher(value).replaceAll("");
+		result = BOUNDARY_QUOTES.matcher(result).replaceAll("");
+		result = result.replaceAll("\\s+", " ").trim();
 		return result.isEmpty() ? value : result;
 	}
 
