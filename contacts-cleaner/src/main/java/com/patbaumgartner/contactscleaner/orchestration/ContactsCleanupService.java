@@ -10,6 +10,8 @@ import com.patbaumgartner.contactscleaner.account.GoogleAccount;
 import com.patbaumgartner.contactscleaner.carddav.AddressBookEntry;
 import com.patbaumgartner.contactscleaner.carddav.CardDavClient;
 import com.patbaumgartner.contactscleaner.cleaning.ContactCleaner;
+import com.patbaumgartner.contactscleaner.cleaning.DuplicateCandidate;
+import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
 import ezvcard.Ezvcard;
 import ezvcard.VCard;
 import ezvcard.VCardVersion;
@@ -46,16 +48,20 @@ public class ContactsCleanupService {
 
 	private final ContactCleaner contactCleaner;
 
+	private final DuplicateContactDetector duplicateContactDetector;
+
 	private final ApplicationEventPublisher eventPublisher;
 
 	/** Guards against overlapping runs (e.g. a startup run during a scheduled run). */
 	private final AtomicBoolean runInProgress = new AtomicBoolean(false);
 
 	ContactsCleanupService(AccountsProperties accountsProperties, CardDavClient cardDavClient,
-			ContactCleaner contactCleaner, ApplicationEventPublisher eventPublisher) {
+			ContactCleaner contactCleaner, DuplicateContactDetector duplicateContactDetector,
+			ApplicationEventPublisher eventPublisher) {
 		this.accountsProperties = accountsProperties;
 		this.cardDavClient = cardDavClient;
 		this.contactCleaner = contactCleaner;
+		this.duplicateContactDetector = duplicateContactDetector;
 		this.eventPublisher = eventPublisher;
 	}
 
@@ -94,6 +100,7 @@ public class ContactsCleanupService {
 			List<AddressBookEntry> entries = cardDavClient.fetchAllContacts(account);
 			int updated = 0;
 			int deleted = 0;
+			List<VCard> survivingContacts = new ArrayList<>();
 			for (AddressBookEntry entry : entries) {
 				VCard vcard = parse(entry);
 				if (vcard == null) {
@@ -103,21 +110,39 @@ public class ContactsCleanupService {
 				if (result.empty()) {
 					deleted += deleteContact(account, entry, vcard) ? 1 : 0;
 				}
-				else if (result.changed()) {
-					updated += updateContact(account, entry, vcard) ? 1 : 0;
+				else {
+					if (result.changed()) {
+						updated += updateContact(account, entry, vcard) ? 1 : 0;
+					}
+					survivingContacts.add(vcard);
 				}
 			}
+			List<DuplicateCandidate> duplicates = duplicateContactDetector.detect(survivingContacts);
+			logDuplicates(account, duplicates);
 			long duration = System.currentTimeMillis() - start;
-			log.info("Completed cleanup for account '{}': {} contacts, {} updated, {} deleted in {}ms{}",
-					account.name(), entries.size(), updated, deleted, duration,
+			log.info(
+					"Completed cleanup for account '{}': {} contacts, {} updated, {} deleted, "
+							+ "{} duplicate candidates in {}ms{}",
+					account.name(), entries.size(), updated, deleted, duplicates.size(), duration,
 					account.dryRun() ? " (dry run — nothing written)" : "");
-			return new AccountCleanupResult(account.name(), true, entries.size(), updated, deleted, account.dryRun(),
-					duration, "Cleanup completed");
+			return new AccountCleanupResult(account.name(), true, entries.size(), updated, deleted, duplicates,
+					account.dryRun(), duration, "Cleanup completed");
 		}
 		catch (RuntimeException ex) {
 			long duration = System.currentTimeMillis() - start;
 			log.error("Cleanup failed for account '{}' after {}ms", account.name(), duration, ex);
 			return AccountCleanupResult.failure(account.name(), duration, ex.getMessage());
+		}
+	}
+
+	/**
+	 * Duplicate handling is report-only by design: merging requires human judgment, so
+	 * candidates are logged for the user to act on in the Google Contacts UI.
+	 */
+	private void logDuplicates(GoogleAccount account, List<DuplicateCandidate> duplicates) {
+		for (DuplicateCandidate duplicate : duplicates) {
+			log.info("[{}] Possible duplicate contacts: '{}' and '{}' — {}", account.name(), duplicate.firstContact(),
+					duplicate.secondContact(), duplicate.reason());
 		}
 	}
 

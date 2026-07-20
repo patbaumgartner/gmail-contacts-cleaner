@@ -40,6 +40,7 @@
     <!-- External Library Versions -->
     <spring-modulith.version>2.1.0</spring-modulith.version>
     <ez-vcard.version>0.12.2</ez-vcard.version>
+    <libphonenumber.version>9.0.35</libphonenumber.version>
     <taikai.version>1.64.0</taikai.version>
 
     <!-- Maven Core Plugins -->
@@ -111,6 +112,13 @@
       <groupId>com.googlecode.ez-vcard</groupId>
       <artifactId>ez-vcard</artifactId>
       <version>${ez-vcard.version}</version>
+    </dependency>
+
+    <!-- Google's phone number parsing/validation — E.164 normalization -->
+    <dependency>
+      <groupId>com.googlecode.libphonenumber</groupId>
+      <artifactId>libphonenumber</artifactId>
+      <version>${libphonenumber.version}</version>
     </dependency>
 
     <dependency>

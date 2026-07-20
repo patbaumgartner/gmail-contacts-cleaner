@@ -33,11 +33,14 @@ public class ContactCleaner {
 
 	private static List<VCardCleaningRule> buildRules(CleaningProperties properties) {
 		List<VCardCleaningRule> rules = new ArrayList<>();
+		if (properties.removeEmptyProperties()) {
+			rules.add(new EmptyPropertyRemovalRule());
+		}
 		if (properties.trimNames()) {
 			rules.add(new NameTrimmingRule());
 		}
 		if (properties.normalizePhoneNumbers()) {
-			rules.add(new PhoneNumberNormalizationRule());
+			rules.add(new PhoneNumberNormalizationRule(properties.phoneRegion()));
 		}
 		if (properties.removeDuplicatePhoneNumbers()) {
 			rules.add(new DuplicatePhoneNumberRemovalRule());
