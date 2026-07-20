@@ -29,6 +29,12 @@ class NativeHintsConfiguration {
 				.registerType(ScribeIndex.class, MemberCategory.INVOKE_PUBLIC_METHODS,
 						MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
 
+			// libphonenumber loads per-region metadata as classpath resources
+			hints.resources()
+				.registerPattern("com/google/i18n/phonenumbers/data/*")
+				.registerPattern("com/google/i18n/phonenumbers/carrier/data/**")
+				.registerPattern("com/google/i18n/phonenumbers/geocoding/data/**");
+
 			// Bean Validation message interpolation resources
 			hints.resources().registerPattern("org/hibernate/validator/ValidationMessages*.properties");
 		}
