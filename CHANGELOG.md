@@ -6,16 +6,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
-
-- Name repair (`repair-names`, on by default): ALL-CAPS names get smart casing
-  (`McDonald`/`O'Brien`/`van der` aware), known prefixes are canonicalized
-  (`Dr` → `Dr.`), e-mail addresses stuck in name fields are moved to e-mails
-- Phone type correction (`correct-phone-types`, on by default): mobile/landline
-  classification verified against the numbering plan via libphonenumber
-- Label normalization extended to phone labels (`Mobil` → CELL, fax labels →
-  FAX type, unknown labels like `WhatsApp`/`Old` → default type)
-
 ## [1.0.0] - 2026-07-20
 
 Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for today's Google.
@@ -78,6 +68,13 @@ Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for to
 - Label normalization extended to URL labels; orphaned `X-ABLabel`s are swept
 - Junk name-suffix removal (on by default): parenthesized messenger-import
   fragments like `(JIRA)` are dropped, honorific suffixes are kept
+- Name repair (`repair-names`, on by default): ALL-CAPS names get smart casing
+  (`McDonald`/`O'Brien`/`van der` aware), known prefixes are canonicalized
+  (`Dr` → `Dr.`), e-mail addresses stuck in name fields are moved to e-mails
+- Phone type correction (`correct-phone-types`, on by default): mobile/landline
+  classification verified against the numbering plan via libphonenumber
+- Label normalization covers e-mail, phone and address labels (`Mobil` → CELL,
+  fax labels → FAX type, unknown labels like `WhatsApp`/`Old` → default type)
 
 **Cleaning rules (destructive, opt-in)**
 - Country-invalid phone number removal (libphonenumber validation)
