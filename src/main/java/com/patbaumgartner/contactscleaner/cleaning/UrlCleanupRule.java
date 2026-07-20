@@ -57,7 +57,7 @@ final class UrlCleanupRule implements VCardCleaningRule {
 				continue;
 			}
 			String trimmed = value.trim();
-			if (isDeadService(trimmed) || !seen.add(trimmed.toLowerCase(Locale.ROOT))) {
+			if (isDeadService(trimmed) || !seen.add(canonicalKey(trimmed))) {
 				iterator.remove();
 				changed = true;
 				continue;
@@ -68,6 +68,14 @@ final class UrlCleanupRule implements VCardCleaningRule {
 			}
 		}
 		return changed;
+	}
+
+	/** Scheme-, www- and trailing-slash-insensitive comparison key. */
+	private String canonicalKey(String url) {
+		String key = url.toLowerCase(Locale.ROOT);
+		key = key.replaceFirst("^https?://", "");
+		key = key.replaceFirst("^www\\.", "");
+		return key.endsWith("/") ? key.substring(0, key.length() - 1) : key;
 	}
 
 	private boolean isDeadService(String url) {

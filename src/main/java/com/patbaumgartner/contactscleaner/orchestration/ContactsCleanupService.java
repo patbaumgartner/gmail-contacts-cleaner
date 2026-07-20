@@ -16,6 +16,7 @@ import com.patbaumgartner.contactscleaner.cleaning.ContactCleaner;
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateCandidate;
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
 import com.patbaumgartner.contactscleaner.cleaning.EmailDomainVerifier;
+import com.patbaumgartner.contactscleaner.cleaning.OrganizationCanonicalizer;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
 import ezvcard.Ezvcard;
 import ezvcard.VCard;
@@ -59,6 +60,8 @@ public class ContactsCleanupService {
 
 	private final EmailDomainVerifier emailDomainVerifier;
 
+	private final OrganizationCanonicalizer organizationCanonicalizer;
+
 	private final ApplicationEventPublisher eventPublisher;
 
 	/** Guards against overlapping runs (e.g. a startup run during a scheduled run). */
@@ -67,13 +70,14 @@ public class ContactsCleanupService {
 	ContactsCleanupService(AccountsProperties accountsProperties, CardDavClient cardDavClient,
 			ContactCleaner contactCleaner, DuplicateContactDetector duplicateContactDetector,
 			SharedPhoneNumberRemover sharedPhoneNumberRemover, EmailDomainVerifier emailDomainVerifier,
-			ApplicationEventPublisher eventPublisher) {
+			OrganizationCanonicalizer organizationCanonicalizer, ApplicationEventPublisher eventPublisher) {
 		this.accountsProperties = accountsProperties;
 		this.cardDavClient = cardDavClient;
 		this.contactCleaner = contactCleaner;
 		this.duplicateContactDetector = duplicateContactDetector;
 		this.sharedPhoneNumberRemover = sharedPhoneNumberRemover;
 		this.emailDomainVerifier = emailDomainVerifier;
+		this.organizationCanonicalizer = organizationCanonicalizer;
 		this.eventPublisher = eventPublisher;
 	}
 
@@ -134,6 +138,7 @@ public class ContactsCleanupService {
 			List<ContactChange> changes = new ArrayList<>();
 			changedContacts.addAll(sharedPhoneNumberRemover.removeSharedNumbers(vcards));
 			changedContacts.addAll(emailDomainVerifier.removeUndeliverableAddresses(vcards));
+			changedContacts.addAll(organizationCanonicalizer.canonicalize(vcards));
 
 			// Pass 3: write back. Emptiness is evaluated last so that a contact whose
 			// only phone number was a shared office line is deleted (when enabled).

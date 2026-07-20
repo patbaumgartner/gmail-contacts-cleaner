@@ -105,8 +105,12 @@ Safety first:
 | Social-network note removal | `XING: xing.com/profile/…`, `Created via LinkedIn`, LinkedIn `Position:/Connected on` blocks stripped — user text preserved | ✅ on |
 | Social/dead-service URL removal | Klout, Gravatar, Google+, Picasa, FriendFeed, XING, Facebook, Twitter/X, Bluesky, Mastodon, Instagram, Threads, TikTok, Flickr, Vimeo… dropped; LinkedIn + personal sites kept; URLs trimmed + deduplicated | ✅ on |
 | Redundant address removal | address that is a less complete copy of another → richer one survives | ✅ on |
+| Geo-coordinate address removal | address that is just `47.39,8.47` (check-in debris) → dropped | ✅ on |
+| Organization canonicalization | `namics AG`/`Namics GmbH` → majority spelling `Namics AG` (cross-contact) | ✅ on |
+| Self-organization removal | `ORG` repeating the person's own name → dropped | ✅ on |
+| Dangling title removal | `TITLE` without any `ORG` (incl. orphaned by org removal) → dropped | ✅ on |
 | Organization removal | configurable names (e.g. defunct companies like `Namics`) → `ORG` dropped | ⛔ opt-in (empty) |
-| Custom-field removal | configurable labels; default `Age` — a never-updated age is misinformation | ✅ on (`Age`) |
+| Custom-field removal | configurable labels; default `Age,Photo` — frozen ages and stale avatar links | ✅ on (`Age,Photo`) |
 | Invalid e-mail removal | `franz@`, `+41791234567` in the e-mail field → dropped (can never receive mail) | ✅ on |
 | Invalid phone removal | `*133#`, `12 9001`, `+4144` — wrong length/undialable for the country → dropped | ⛔ opt-in |
 | Fax number removal | `TEL;TYPE=FAX` (work + home) → dropped — it is not 1995 | ⛔ opt-in |
@@ -260,9 +264,13 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_REMOVE_INVALID_EMAILS` | `true` | Drop syntactically broken e-mail addresses |
 | `CONTACTS_CLEANER_REMOVE_INVALID_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop numbers invalid for their country |
 | `CONTACTS_CLEANER_REMOVE_FAX_NUMBERS` | `false` | ⚠️ Destructive — drop work/home fax numbers |
-| `CONTACTS_CLEANER_REMOVE_CUSTOM_FIELDS` | `Age` | Comma-separated custom-field labels to delete (empty = off) |
+| `CONTACTS_CLEANER_REMOVE_CUSTOM_FIELDS` | `Age,Photo` | Comma-separated custom-field labels to delete (empty = off) |
 | `CONTACTS_CLEANER_REMOVE_ORGANIZATIONS` | _(empty)_ | Comma-separated defunct organization names to delete |
 | `CONTACTS_CLEANER_REMOVE_REDUNDANT_ADDRESSES` | `true` | Collapse subset addresses into the richer one |
+| `CONTACTS_CLEANER_REMOVE_GEO_COORDINATE_ADDRESSES` | `true` | Drop coordinate-only addresses |
+| `CONTACTS_CLEANER_REMOVE_SELF_ORGANIZATIONS` | `true` | Drop orgs repeating the person's name |
+| `CONTACTS_CLEANER_REMOVE_DANGLING_TITLES` | `true` | Drop titles without an organization |
+| `CONTACTS_CLEANER_CANONICALIZE_ORGANIZATIONS` | `true` | Unify company spellings (majority wins) |
 | `CONTACTS_CLEANER_VERIFY_EMAIL_DOMAINS` | `false` | ⚠️ DNS check — drop addresses of dead domains |
 | `CONTACTS_CLEANER_REMOVE_SHARED_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop switchboard numbers |
 | `CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD` | `2` | Contacts sharing a number before it is removed (3 keeps couples' landlines) |

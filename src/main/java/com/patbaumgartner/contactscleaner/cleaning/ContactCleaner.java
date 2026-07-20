@@ -36,6 +36,9 @@ public class ContactCleaner {
 		if (properties.removeEmptyProperties()) {
 			rules.add(new EmptyPropertyRemovalRule());
 		}
+		if (properties.removeGeoCoordinateAddresses()) {
+			rules.add(new GeoCoordinateAddressRemovalRule());
+		}
 		if (properties.removeRedundantAddresses()) {
 			rules.add(new RedundantAddressRemovalRule());
 		}
@@ -88,6 +91,14 @@ public class ContactCleaner {
 		}
 		if (!properties.removeOrganizations().isEmpty()) {
 			rules.add(new OrganizationRemovalRule(properties.removeOrganizations()));
+		}
+		if (properties.removeSelfOrganizations()) {
+			rules.add(new SelfOrganizationRemovalRule());
+		}
+		// Must run after all organization rules: the decision depends on the final
+		// state (a title orphaned by organization removal is dangling too).
+		if (properties.removeDanglingTitles()) {
+			rules.add(new DanglingTitleRemovalRule());
 		}
 		if (properties.removeNotes()) {
 			rules.add(new NoteRemovalRule());
