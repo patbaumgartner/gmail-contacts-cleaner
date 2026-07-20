@@ -57,6 +57,12 @@ contacts-cleaner:
     # stale by definition; other candidates from old sync tools: Other Organizations.
     # Empty disables the rule. The export-analysis IT prints an inventory.
     remove-custom-fields: "${CONTACTS_CLEANER_REMOVE_CUSTOM_FIELDS:Age}"
+    # Organization names to delete (comma-separated, prefix match) — for companies
+    # that no longer exist, e.g. "Namics". Empty disables the rule.
+    remove-organizations: "${CONTACTS_CLEANER_REMOVE_ORGANIZATIONS:}"
+    # Drop postal addresses that are a less complete copy of another address on the
+    # same contact (all filled components equal) — the richer one survives.
+    remove-redundant-addresses: "${CONTACTS_CLEANER_REMOVE_REDUNDANT_ADDRESSES:true}"
     normalize-email-addresses: "${CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES:true}"
     remove-duplicate-email-addresses: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES:true}"
     # Drop e-mail addresses that are not syntactically valid (missing @, no TLD).

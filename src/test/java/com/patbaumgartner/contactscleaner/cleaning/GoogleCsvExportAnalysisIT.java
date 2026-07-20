@@ -82,6 +82,9 @@ class GoogleCsvExportAnalysisIT {
 		rules.put("SocialNetworkNoteRemovalRule", SocialNetworkNoteRemovalRule::new);
 		rules.put("UrlCleanupRule", UrlCleanupRule::new);
 		rules.put("CustomFieldRemovalRule (Age)", () -> new CustomFieldRemovalRule(java.util.List.of("Age")));
+		rules.put("RedundantAddressRemovalRule", RedundantAddressRemovalRule::new);
+		rules.put("OrganizationRemovalRule (Namics, opt-in)",
+				() -> new OrganizationRemovalRule(java.util.List.of("Namics")));
 
 		List<VCard> contacts = GoogleCsvContacts.read(EXPORT);
 		for (Map.Entry<String, Supplier<VCardCleaningRule>> entry : rules.entrySet()) {
@@ -159,7 +162,8 @@ class GoogleCsvExportAnalysisIT {
 	/** What would the opt-in shared-office-number removal do? */
 	private void sharedNumberReport(List<VCard> contacts) {
 		CleaningProperties enabled = new CleaningProperties(true, "CH", true, false, false, true, true, true, false,
-				true, true, true, false, true, true, true, java.util.List.of("Age"), true, 2, false, false);
+				true, true, true, true, false, true, true, true, java.util.List.of("Age"), java.util.List.of(), true, 2,
+				false, false);
 		var changed = new SharedPhoneNumberRemover(enabled).removeSharedNumbers(contacts);
 		section("SHARED PHONE NUMBERS (opt-in remove-shared-phone-numbers, default threshold 2): %d contacts affected"
 			.formatted(changed.size()));

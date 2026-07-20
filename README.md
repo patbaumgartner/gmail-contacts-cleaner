@@ -102,7 +102,9 @@ Safety first:
 | Flipped-name repair | `given=Girba, family=Tudor` + e-mail `tudor.girba@…` → names swapped (only with e-mail evidence, never guessed) | ✅ on |
 | Birthday extraction | note `Geburtstag: 12.03.1980` → proper `BDAY` field (existing birthdays never overwritten) | ✅ on |
 | Social-network note removal | `XING: xing.com/profile/…`, `Created via LinkedIn`, LinkedIn `Position:/Connected on` blocks stripped — user text preserved | ✅ on |
-| Dead-service URL removal | Klout, Gravatar, Google+, Picasa, FriendFeed, XING links dropped; URLs trimmed + deduplicated | ✅ on |
+| Dead-service URL removal | Klout, Gravatar, Google+, Picasa, FriendFeed, XING, Facebook links dropped; URLs trimmed + deduplicated | ✅ on |
+| Redundant address removal | address that is a less complete copy of another → richer one survives | ✅ on |
+| Organization removal | configurable names (e.g. defunct companies like `Namics`) → `ORG` dropped | ⛔ opt-in (empty) |
 | Custom-field removal | configurable labels; default `Age` — a never-updated age is misinformation | ✅ on (`Age`) |
 | Invalid e-mail removal | `franz@`, `+41791234567` in the e-mail field → dropped (can never receive mail) | ✅ on |
 | Invalid phone removal | `*133#`, `12 9001`, `+4144` — wrong length/undialable for the country → dropped | ⛔ opt-in |
@@ -257,6 +259,8 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_REMOVE_INVALID_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop numbers invalid for their country |
 | `CONTACTS_CLEANER_REMOVE_FAX_NUMBERS` | `false` | ⚠️ Destructive — drop work/home fax numbers |
 | `CONTACTS_CLEANER_REMOVE_CUSTOM_FIELDS` | `Age` | Comma-separated custom-field labels to delete (empty = off) |
+| `CONTACTS_CLEANER_REMOVE_ORGANIZATIONS` | _(empty)_ | Comma-separated defunct organization names to delete |
+| `CONTACTS_CLEANER_REMOVE_REDUNDANT_ADDRESSES` | `true` | Collapse subset addresses into the richer one |
 | `CONTACTS_CLEANER_VERIFY_EMAIL_DOMAINS` | `false` | ⚠️ DNS check — drop addresses of dead domains |
 | `CONTACTS_CLEANER_REMOVE_SHARED_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop switchboard numbers |
 | `CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD` | `2` | Contacts sharing a number before it is removed (3 keeps couples' landlines) |
