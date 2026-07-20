@@ -64,6 +64,14 @@ class DuplicateContactDetectorTests {
 	}
 
 	@Test
+	void ignoresSwitchboardNumbersSharedByThreeOrMoreContacts() {
+		List<DuplicateCandidate> candidates = detector.detect(List.of(contact("Colleague One", "+41712286788", null),
+				contact("Colleague Two", "+41712286788", null), contact("Colleague Three", "+41712286788", null)));
+
+		assertThat(candidates).isEmpty();
+	}
+
+	@Test
 	void distinctContactsProduceNoCandidates() {
 		List<DuplicateCandidate> candidates = detector
 			.detect(List.of(contact("Jane Doe", "+41446681800", "jane.doe@gmail.com"),
@@ -82,8 +90,8 @@ class DuplicateContactDetectorTests {
 
 	@Test
 	void returnsEmptyWhenDetectionIsDisabled() {
-		var disabled = new DuplicateContactDetector(
-				new CleaningProperties(true, "", true, true, true, true, true, false, true, true, false, false));
+		var disabled = new DuplicateContactDetector(new CleaningProperties(true, "", true, true, true, true, true,
+				false, true, false, true, true, true, false, 3, false, false));
 
 		assertThat(disabled
 			.detect(List.of(contact("Jane Doe", "+41446681800", null), contact("Jane Doe", "+41446681800", null))))

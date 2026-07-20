@@ -47,6 +47,50 @@ class SocialNetworkNoteRemovalRuleTests {
 	}
 
 	@Test
+	void removesLinkedInImportPositionBlocks() {
+		VCard vcard = new VCard();
+		vcard.addNote("""
+				Position: CTO & Co-Founder
+				Connected on: 3/12/11, 10:11 PM
+
+
+				Position: CTO & Co-Founder | Company: ACME Corp""");
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getNotes()).isEmpty();
+	}
+
+	@Test
+	void removesPipeCombinedPositionCompanyLinesEvenWithoutMarker() {
+		VCard vcard = new VCard();
+		vcard.addNote("Position: Co-Founder | Company: ACME GmbH");
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getNotes()).isEmpty();
+	}
+
+	@Test
+	void keepsUserWrittenPositionNotesWithoutTheLinkedInMarker() {
+		VCard vcard = new VCard();
+		vcard.addNote("Position: goalie in our hobby team");
+
+		assertThat(this.rule.apply(vcard)).isFalse();
+		assertThat(vcard.getNotes()).hasSize(1);
+	}
+
+	@Test
+	void preservesUserTextInsideLinkedInImportNotes() {
+		VCard vcard = new VCard();
+		vcard.addNote("""
+				Position: CTO & Co-Founder
+				Connected on 12.03.2011
+				Met her at Voxxed Days Zurich.""");
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getNotes()).extracting(Note::getValue).containsExactly("Met her at Voxxed Days Zurich.");
+	}
+
+	@Test
 	void handlesContactsWithoutNotes() {
 		assertThat(this.rule.apply(new VCard())).isFalse();
 	}
