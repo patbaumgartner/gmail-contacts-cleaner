@@ -48,4 +48,6 @@ nbdist/
 *.log
 
 # ── Local test data — real contact exports contain personal data, never commit ─
-test-data/
+# (only the README describing the setup is tracked)
+test-data/*
+!test-data/README.md

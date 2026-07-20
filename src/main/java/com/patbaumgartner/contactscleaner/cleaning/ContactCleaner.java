@@ -48,6 +48,9 @@ public class ContactCleaner {
 		if (properties.normalizeEmailAddresses()) {
 			rules.add(new EmailNormalizationRule());
 		}
+		if (properties.removeInvalidEmails()) {
+			rules.add(new InvalidEmailRemovalRule());
+		}
 		if (properties.removeDuplicateEmailAddresses()) {
 			rules.add(new DuplicateEmailRemovalRule());
 		}
@@ -58,6 +61,9 @@ public class ContactCleaner {
 		}
 		if (properties.removeSocialNetworkNotes()) {
 			rules.add(new SocialNetworkNoteRemovalRule());
+		}
+		if (properties.cleanUrls()) {
+			rules.add(new UrlCleanupRule());
 		}
 		if (properties.removeNotes()) {
 			rules.add(new NoteRemovalRule());
@@ -75,7 +81,7 @@ public class ContactCleaner {
 		for (VCardCleaningRule rule : rules) {
 			changed |= rule.apply(vcard);
 		}
-		boolean empty = properties.deleteEmptyContacts() && isEmpty(vcard);
+		boolean empty = isDeletableEmptyContact(vcard);
 		if (log.isTraceEnabled()) {
 			log.trace("Cleaned contact '{}': changed={}, empty={}", displayName(vcard), changed, empty);
 		}
@@ -83,11 +89,26 @@ public class ContactCleaner {
 	}
 
 	/**
-	 * A contact is considered empty when it has neither phone numbers nor e-mail
-	 * addresses — mirroring the heuristic of the original 2011 gcontacts-cleaner.
+	 * Whether the contact carries no information at all and empty-contact deletion is
+	 * enabled. Evaluated by the orchestration <em>after</em> all cleaning passes, so a
+	 * contact whose last phone number was a removed office line is caught too.
+	 * @param vcard the contact to check
+	 * @return {@code true} if the contact should be deleted
+	 */
+	public boolean isDeletableEmptyContact(VCard vcard) {
+		return properties.deleteEmptyContacts() && isEmpty(vcard);
+	}
+
+	/**
+	 * A contact is considered empty only when it carries no information at all beyond a
+	 * bare name: no phone number, no e-mail address, no birthday, no postal address, no
+	 * website, no note and no organization. A birthday-only contact, for example, still
+	 * serves as a reminder and is kept.
 	 */
 	private boolean isEmpty(VCard vcard) {
-		return vcard.getTelephoneNumbers().isEmpty() && vcard.getEmails().isEmpty();
+		return vcard.getTelephoneNumbers().isEmpty() && vcard.getEmails().isEmpty() && vcard.getBirthday() == null
+				&& vcard.getAddresses().isEmpty() && vcard.getUrls().isEmpty() && vcard.getNotes().isEmpty()
+				&& vcard.getOrganizations().isEmpty();
 	}
 
 	private String displayName(VCard vcard) {

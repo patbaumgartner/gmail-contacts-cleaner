@@ -28,4 +28,13 @@
     <Class name="com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector" />
   </Match>
 
+  <!-- FindSecBugs' ReDoS detector does not model possessive quantifiers (++): the
+       e-mail regex uses them exclusively, which makes backtracking impossible and the
+       match linear. Additionally, inputs are the user's own vCard field values, not
+       attacker-controlled payloads. -->
+  <Match>
+    <Bug pattern="REDOS" />
+    <Class name="com.patbaumgartner.contactscleaner.cleaning.InvalidEmailRemovalRule" />
+  </Match>
+
 </FindBugsFilter>
