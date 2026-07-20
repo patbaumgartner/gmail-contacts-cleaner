@@ -48,6 +48,9 @@ public class ContactCleaner {
 		if (properties.removeJunkNameSuffixes()) {
 			rules.add(new JunkNameSuffixRemovalRule());
 		}
+		if (properties.repairNames()) {
+			rules.add(new NameRepairRule());
+		}
 		if (properties.normalizeLabels()) {
 			rules.add(new LabelNormalizationRule());
 		}
