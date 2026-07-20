@@ -1,0 +1,63 @@
+# Changelog
+
+All notable changes to this project are documented in this file. The format is based
+on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
+to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [1.0.0] - 2026-07-20
+
+Initial release — the spiritual successor of
+[gcontacts-cleaner](https://github.com/patbaumgartner/gcontacts-cleaner) (2011),
+rebuilt for today's Google.
+
+### Added
+
+**Core**
+- Google CardDAV client (RFC 6352) authenticating with per-account **app passwords** —
+  no OAuth, no Google Cloud project: `PROPFIND Depth:1` listing +
+  `addressbook-multiget` in batches of 25, etag-guarded `PUT`/`DELETE`, request
+  throttling, bisect-and-retry on server errors
+- **Multiple configurable accounts**, each with `enabled` and `dry-run` flags
+- Nightly built-in scheduler (`server` profile, cron/zone configurable) or one-shot
+  startup run for external cron / NAS schedulers
+- **Single-page HTML report** after every run: per-account summary, red/green
+  before/after diffs, deletion badges, duplicate candidates, live filter, dark mode
+
+**Cleaning rules (non-destructive, on by default)**
+- Phone normalization: separators, `00` → `+`, invisible Unicode bidi marks, `++`;
+  optional **E.164 formatting** via libphonenumber with configurable `phone-region`
+- Duplicate phone/e-mail removal within a contact
+- E-mail normalization (lower-case, trim) and syntactically-invalid e-mail removal
+- Name whitespace trimming and **flipped-name repair** (swaps given/family only when
+  the contact's own e-mail proves the order)
+- Empty-property removal (blank `TEL`/`EMAIL`/`URL`/`NOTE`, all-blank `ORG`/`ADR`)
+- Social-network sync-note removal (XING/LinkedIn profile URLs, LinkedIn
+  `Position:`/`Connected on` import blocks) — user-written text preserved
+- Dead-service URL cleanup (Klout, Gravatar, Google+, Google Profiles, Picasa,
+  FriendFeed) plus URL trim + dedup
+- Birthday extraction: promotes keyword-tagged note birthdays to a proper `BDAY`
+- Report-only **duplicate contact detection** (shared phone/e-mail, near-identical or
+  word-flipped names) — merge with Google's own "Merge & fix"
+
+**Cleaning rules (destructive, opt-in)**
+- Country-invalid phone number removal (libphonenumber validation)
+- Shared phone number removal (numbers on ≥ 2 contacts = switchboard/household line)
+- DNS-verified e-mail domain check (removes addresses only on authoritative NXDOMAIN)
+- Note removal and empty-contact deletion (no phone, e-mail, birthday, address, URL,
+  note or organization)
+
+**Engineering**
+- Spring Boot 4.1 / Spring Modulith 2.1 / Java 25, GraalVM native image via Paketo
+  buildpacks
+- 186 unit tests + integration tests (embedded fake CardDAV server, optional
+  read-only test against real Google), Spring Modulith verification, Taikai/ArchUnit
+  architecture rules, SpotBugs + FindSecBugs, JaCoCo, PIT, OWASP dependency-check,
+  CycloneDX SBOM
+- Offline analysis IT against a local Google CSV export (`test-data/`, gitignored)
+  with per-rule hit counts, diffs and a residual-dirt scan
+- GitHub Actions CI/release pipelines, Dependabot, dependency review, auto-merge
+
+[Unreleased]: https://github.com/patbaumgartner/gmail-contacts-cleaner/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/patbaumgartner/gmail-contacts-cleaner/releases/tag/v1.0.0
