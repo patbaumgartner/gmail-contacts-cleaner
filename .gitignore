@@ -51,3 +51,6 @@ nbdist/
 # (only the README describing the setup is tracked)
 test-data/*
 !test-data/README.md
+
+# ── Generated cleanup reports (contain personal contact data) ─────────────────
+reports/
