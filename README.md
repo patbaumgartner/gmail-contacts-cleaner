@@ -98,8 +98,8 @@ Safety first:
 | Duplicate e-mail removal | keeps the first occurrence | ✅ on |
 | Name trimming | `" Jane  Doe "` → `"Jane Doe"` | ✅ on |
 | Empty property removal | `EMAIL:`, `ORG:;;`, all-blank `ADR` → dropped | ✅ on |
-| Duplicate **contact** detection | two cards sharing a phone/e-mail or near-identical name → **reported, not touched** | ✅ on (report-only) |
-| Duplicate **contact** merging | provable duplicates (same name tokens + shared phone/e-mail, e.g. `Max Muster` = `Muster Max`) → union-merged into one card | ⛔ opt-in |
+| Duplicate **contact** detection | two cards sharing a phone/e-mail, near-identical or word-flipped names → **reported, not touched** (merge them with Google's own "Merge & fix") | ✅ on (report-only) |
+| Flipped-name repair | `given=Muster, family=Max` + e-mail `max.muster@…` → names swapped (only with e-mail evidence, never guessed) | ✅ on |
 | Birthday extraction | note `Geburtstag: 12.03.1980` → proper `BDAY` field (existing birthdays never overwritten) | ✅ on |
 | Social-network note removal | `XING: xing.com/profile/…`, `Created via LinkedIn`, LinkedIn `Position:/Connected on` blocks stripped — user text preserved | ✅ on |
 | Dead-service URL removal | Klout, Gravatar, Google+, Picasa, FriendFeed links dropped; URLs trimmed + deduplicated | ✅ on |
@@ -248,7 +248,7 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_TRIM_NAMES` | `true` | Trim name whitespace |
 | `CONTACTS_CLEANER_REMOVE_EMPTY_PROPERTIES` | `true` | Drop blank `TEL`/`EMAIL`/`URL`/`NOTE`, all-blank `ORG`/`ADR` |
 | `CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS` | `true` | Report-only: log likely duplicate contact pairs |
-| `CONTACTS_CLEANER_MERGE_DUPLICATE_CONTACTS` | `false` | ⚠️ Destructive — auto-merge provable duplicates |
+| `CONTACTS_CLEANER_REPAIR_FLIPPED_NAMES` | `true` | Swap given/family when the contact's e-mail proves the order |
 | `CONTACTS_CLEANER_EXTRACT_BIRTHDAYS` | `true` | Promote keyword-tagged note birthdays to `BDAY` |
 | `CONTACTS_CLEANER_REMOVE_SOCIAL_NETWORK_NOTES` | `true` | Strip XING/LinkedIn sync lines from notes |
 | `CONTACTS_CLEANER_REMOVE_INVALID_EMAILS` | `true` | Drop syntactically broken e-mail addresses |
@@ -274,7 +274,7 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 
 After every run a **self-contained single-page HTML report** is written to
 `reports/cleanup-report-latest.html` (plus a timestamped copy): summary cards per
-account, red/green before/after diff per contact, merge and deletion badges, the
+account, red/green before/after diff per contact, update and deletion badges, the
 duplicate-candidate list, and a live filter box. Run with `dry-run: true`, open the
 report, review every change visually — then go live.
 
@@ -317,14 +317,30 @@ with `dry-run: true` and read the log. Writes are etag-guarded, so concurrent ed
 from your phone always win.
 
 **Q: Does it merge duplicate contacts (two cards for the same person)?**
-A: It *detects* them — pairs sharing a phone number, e-mail address, or a near-identical
-name (Jaro-Winkler) are reported in the run summary. Merging stays a deliberate human
-action in the Google Contacts UI: which card wins and which data survives requires
-judgment no heuristic should make for you.
+A: No — deliberately. It *detects* them (shared phone/e-mail, near-identical or
+word-flipped names) and lists the pairs in the run summary and HTML report. Merging is
+best done with Google's own **"Merge & fix"** at contacts.google.com, which shows both
+cards side by side and lets you decide what survives.
 
 **Q: My account uses Advanced Protection / no app passwords.**
 A: App passwords are unavailable under Google's Advanced Protection Program. You would
 need to fall back to the People API with OAuth — out of scope for this project.
+
+---
+
+## Releasing
+
+Releases are fully automated. Tag and push:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The [release workflow](.github/workflows/release.yml) builds the GraalVM native image,
+publishes `patbaumgartner/contacts-cleaner:<version>` (+ `:latest`) to Docker Hub and
+creates a GitHub release with generated notes. See [CHANGELOG.md](CHANGELOG.md) for
+the version history.
 
 ---
 

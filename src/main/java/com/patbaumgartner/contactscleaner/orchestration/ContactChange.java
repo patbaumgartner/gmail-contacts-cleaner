@@ -26,10 +26,7 @@ public record ContactChange(String contactName, Type type, List<String> removedL
 		UPDATED,
 
 		/** The contact carried no information and was deleted. */
-		DELETED,
-
-		/** The contact was merged into another card and deleted. */
-		MERGED
+		DELETED
 
 	}
 }

@@ -98,6 +98,12 @@ public class DuplicateContactDetector {
 				if (names.get(j).isEmpty() || reported.contains(new PairKey(i, j))) {
 					continue;
 				}
+				if (sameTokens(names.get(i), names.get(j))) {
+					reported.add(new PairKey(i, j));
+					candidates.add(new DuplicateCandidate(displayName(vcards.get(i)), displayName(vcards.get(j)),
+							"same name, different word order"));
+					continue;
+				}
 				double similarity = JaroWinklerSimilarity.of(names.get(i), names.get(j));
 				if (similarity >= NAME_SIMILARITY_THRESHOLD) {
 					reported.add(new PairKey(i, j));
@@ -106,6 +112,17 @@ public class DuplicateContactDetector {
 				}
 			}
 		}
+	}
+
+	/** "muster max" and "max muster": same tokens, genuinely different order. */
+	private boolean sameTokens(String first, String second) {
+		if (first.equals(second)) {
+			return false;
+		}
+		// HashSet, not Set.of: names like "Fritz Fritz" contain duplicate tokens.
+		Set<String> firstTokens = new HashSet<>(List.of(first.split(" ")));
+		Set<String> secondTokens = new HashSet<>(List.of(second.split(" ")));
+		return firstTokens.size() > 1 && firstTokens.equals(secondTokens);
 	}
 
 	private Set<String> sharedValueKeys(VCard vcard) {

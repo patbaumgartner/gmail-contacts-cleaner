@@ -55,7 +55,6 @@ class GoogleCsvExportAnalysisIT {
 		perRuleHitCounts(contacts, properties);
 		List<String> diffs = fullCleanWithDiffs(contacts, properties);
 		duplicateReport(contacts, properties);
-		mergeReport(contacts);
 		sharedNumberReport(contacts);
 		residualDirtScan(contacts);
 		writeHtmlReport(properties);
@@ -70,6 +69,7 @@ class GoogleCsvExportAnalysisIT {
 		Map<String, Supplier<VCardCleaningRule>> rules = new LinkedHashMap<>();
 		rules.put("EmptyPropertyRemovalRule", EmptyPropertyRemovalRule::new);
 		rules.put("NameTrimmingRule", NameTrimmingRule::new);
+		rules.put("FlippedNameRepairRule", FlippedNameRepairRule::new);
 		rules.put("PhoneNumberNormalizationRule (CH)", () -> new PhoneNumberNormalizationRule("CH"));
 		rules.put("DuplicatePhoneNumberRemovalRule", DuplicatePhoneNumberRemovalRule::new);
 		rules.put("InvalidPhoneNumberRemovalRule (CH, opt-in)", () -> new InvalidPhoneNumberRemovalRule("CH"));
@@ -145,26 +145,12 @@ class GoogleCsvExportAnalysisIT {
 						after.stream().filter((line) -> !before.contains(line)).toList()));
 			}
 		}
-		var merger = new DuplicateContactMerger(properties.withMergeDuplicateContacts());
-		for (DuplicateContactMerger.Merge merge : merger.merge(contacts)) {
-			for (VCard duplicate : merge.merged()) {
-				changes.add(new ContactChange(displayName(duplicate), ContactChange.Type.MERGED,
-						snapshots.get(duplicate), List.of("merged into '" + displayName(merge.primary()) + "'")));
-			}
-		}
 		var duplicates = new DuplicateContactDetector(properties).detect(contacts);
 		var result = new AccountCleanupResult("export-analysis (simulated)", true, contacts.size(), updated, 0,
 				duplicates, changes, true, 0, "Simulated from " + EXPORT);
 		new HtmlReportWriter(new ReportProperties(true, "reports"))
 			.onCleanupRunCompleted(new CleanupRunCompleted(java.time.Instant.now(), List.of(result)));
 		section("HTML REPORT written to reports/cleanup-report-latest.html — open it in a browser");
-	}
-
-	/** What would the opt-in duplicate merge do? */
-	private void mergeReport(List<VCard> contacts) {
-		var merges = new DuplicateContactMerger(CleaningProperties.defaults().withMergeDuplicateContacts())
-			.merge(contacts);
-		section("AUTO-MERGES (opt-in merge-duplicate-contacts): %d merge groups".formatted(merges.size()));
 	}
 
 	/** What would the opt-in shared-office-number removal do? */
