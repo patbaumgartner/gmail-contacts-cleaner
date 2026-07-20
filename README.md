@@ -97,12 +97,13 @@ Safety first:
 | E-mail normalization | ` Jane.Doe@GMAIL.com ` → `jane.doe@gmail.com` | ✅ on |
 | Duplicate e-mail removal | keeps the first occurrence | ✅ on |
 | Name trimming | `" Jane  Doe "` → `"Jane Doe"` | ✅ on |
+| Label normalization | custom labels → standard types: `Geschäftlich` → `WORK`, `Internet email`/`Obsolete` → default | ✅ on |
 | Empty property removal | `EMAIL:`, `ORG:;;`, all-blank `ADR` → dropped | ✅ on |
 | Duplicate **contact** detection | two cards sharing a phone/e-mail, near-identical or word-flipped names → **reported, not touched** (merge them with Google's own "Merge & fix") | ✅ on (report-only) |
 | Flipped-name repair | `given=Girba, family=Tudor` + e-mail `tudor.girba@…` → names swapped (only with e-mail evidence, never guessed) | ✅ on |
 | Birthday extraction | note `Geburtstag: 12.03.1980` → proper `BDAY` field (existing birthdays never overwritten) | ✅ on |
 | Social-network note removal | `XING: xing.com/profile/…`, `Created via LinkedIn`, LinkedIn `Position:/Connected on` blocks stripped — user text preserved | ✅ on |
-| Dead-service URL removal | Klout, Gravatar, Google+, Picasa, FriendFeed, XING, Facebook links dropped; URLs trimmed + deduplicated | ✅ on |
+| Social/dead-service URL removal | Klout, Gravatar, Google+, Picasa, FriendFeed, XING, Facebook, Twitter/X, Bluesky, Mastodon, Instagram, Threads, TikTok, Flickr, Vimeo… dropped; LinkedIn + personal sites kept; URLs trimmed + deduplicated | ✅ on |
 | Redundant address removal | address that is a less complete copy of another → richer one survives | ✅ on |
 | Organization removal | configurable names (e.g. defunct companies like `Namics`) → `ORG` dropped | ⛔ opt-in (empty) |
 | Custom-field removal | configurable labels; default `Age` — a never-updated age is misinformation | ✅ on (`Age`) |
@@ -250,6 +251,7 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES` | `true` | Lower-case + trim |
 | `CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES` | `true` | Deduplicate per contact |
 | `CONTACTS_CLEANER_TRIM_NAMES` | `true` | Trim name whitespace |
+| `CONTACTS_CLEANER_NORMALIZE_LABELS` | `true` | Custom e-mail/address labels → standard vCard types |
 | `CONTACTS_CLEANER_REMOVE_EMPTY_PROPERTIES` | `true` | Drop blank `TEL`/`EMAIL`/`URL`/`NOTE`, all-blank `ORG`/`ADR` |
 | `CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS` | `true` | Report-only: log likely duplicate contact pairs |
 | `CONTACTS_CLEANER_REPAIR_FLIPPED_NAMES` | `true` | Swap given/family when the contact's e-mail proves the order |

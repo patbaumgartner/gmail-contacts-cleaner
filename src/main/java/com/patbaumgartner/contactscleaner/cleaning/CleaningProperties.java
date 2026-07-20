@@ -36,6 +36,10 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * domain authoritatively no longer exists (NXDOMAIN); DNS timeouts never count as proof
  * (<strong>destructive</strong> and requires network access, off by default)
  * @param trimNames trim whitespace around given/family/middle/formatted names
+ * @param normalizeLabels replace custom e-mail/address labels with the standard vCard
+ * types: work/home variants (localized included) become {@code TYPE=WORK}/{@code HOME},
+ * other custom labels ({@code Internet email}, {@code Obsolete}, ...) are dropped in
+ * favor of the default type
  * @param removeRedundantAddresses drop postal addresses that are a less complete version
  * of another address on the same contact (all filled components equal, the survivor has
  * more) — different addresses are never touched
@@ -83,13 +87,13 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		@DefaultValue("true") boolean normalizeEmailAddresses,
 		@DefaultValue("true") boolean removeDuplicateEmailAddresses, @DefaultValue("true") boolean removeInvalidEmails,
 		@DefaultValue("false") boolean verifyEmailDomains, @DefaultValue("true") boolean trimNames,
-		@DefaultValue("true") boolean removeEmptyProperties, @DefaultValue("true") boolean removeRedundantAddresses,
-		@DefaultValue("true") boolean detectDuplicateContacts, @DefaultValue("true") boolean repairFlippedNames,
-		@DefaultValue("true") boolean extractBirthdays, @DefaultValue("true") boolean removeSocialNetworkNotes,
-		@DefaultValue("true") boolean cleanUrls, @DefaultValue("Age") List<String> removeCustomFields,
-		@DefaultValue("") List<String> removeOrganizations, @DefaultValue("false") boolean removeSharedPhoneNumbers,
-		@DefaultValue("2") int sharedPhoneNumberThreshold, @DefaultValue("false") boolean removeNotes,
-		@DefaultValue("false") boolean deleteEmptyContacts) {
+		@DefaultValue("true") boolean normalizeLabels, @DefaultValue("true") boolean removeEmptyProperties,
+		@DefaultValue("true") boolean removeRedundantAddresses, @DefaultValue("true") boolean detectDuplicateContacts,
+		@DefaultValue("true") boolean repairFlippedNames, @DefaultValue("true") boolean extractBirthdays,
+		@DefaultValue("true") boolean removeSocialNetworkNotes, @DefaultValue("true") boolean cleanUrls,
+		@DefaultValue("Age") List<String> removeCustomFields, @DefaultValue("") List<String> removeOrganizations,
+		@DefaultValue("false") boolean removeSharedPhoneNumbers, @DefaultValue("2") int sharedPhoneNumberThreshold,
+		@DefaultValue("false") boolean removeNotes, @DefaultValue("false") boolean deleteEmptyContacts) {
 
 	public CleaningProperties {
 		removeCustomFields = (removeCustomFields != null) ? List.copyOf(removeCustomFields) : List.of();
@@ -104,7 +108,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 */
 	public static CleaningProperties defaults() {
 		return new CleaningProperties(true, "", true, false, false, true, true, true, false, true, true, true, true,
-				true, true, true, true, List.of("Age"), List.of(), false, 2, false, false);
+				true, true, true, true, true, List.of("Age"), List.of(), false, 2, false, false);
 	}
 
 	/**
@@ -115,10 +119,10 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	public CleaningProperties withPhoneRegion(String phoneRegion) {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers, removeFaxNumbers,
 				removeInvalidPhoneNumbers, normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails,
-				verifyEmailDomains, trimNames, removeEmptyProperties, removeRedundantAddresses, detectDuplicateContacts,
-				repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeCustomFields,
-				removeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold, removeNotes,
-				deleteEmptyContacts);
+				verifyEmailDomains, trimNames, normalizeLabels, removeEmptyProperties, removeRedundantAddresses,
+				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
+				removeCustomFields, removeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold,
+				removeNotes, deleteEmptyContacts);
 	}
 
 	/**
@@ -130,9 +134,9 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	public CleaningProperties withDestructiveOptions(boolean removeNotes, boolean deleteEmptyContacts) {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers, removeFaxNumbers,
 				removeInvalidPhoneNumbers, normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails,
-				verifyEmailDomains, trimNames, removeEmptyProperties, removeRedundantAddresses, detectDuplicateContacts,
-				repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeCustomFields,
-				removeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold, removeNotes,
-				deleteEmptyContacts);
+				verifyEmailDomains, trimNames, normalizeLabels, removeEmptyProperties, removeRedundantAddresses,
+				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
+				removeCustomFields, removeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold,
+				removeNotes, deleteEmptyContacts);
 	}
 }
