@@ -6,43 +6,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
-
-- Opt-in fax number removal (`remove-fax-numbers`): drops `TEL;TYPE=FAX` entries
-  (work and home)
-- Custom-field removal by label (`remove-custom-fields`, default `Age`): deletes
-  Apple-style `X-ABLabel` groups and `X-<label>` properties
-- XING profile URLs added to the URL cleanup (sync-app spam)
-- Export analysis prints a custom-field label inventory
-- Social profile URLs added to the URL cleanup (Facebook, Twitter/X, Bluesky,
-  Mastodon, Instagram, Threads, TikTok, Snapchat, Flickr, Vimeo, Foursquare,
-  about.me); LinkedIn and personal sites are kept
-- Organization removal by name (`remove-organizations`, empty by default) for
-  defunct companies
-- Label normalization (`normalize-labels`, on by default): custom e-mail/address
-  labels become standard vCard types ('Geschäftlich' → WORK) or are dropped for
-  the default type ('Internet email', 'Obsolete', ...)
-- Redundant address removal (`remove-redundant-addresses`, on by default): keeps
-  the richer of two addresses when one is a subset of the other
-
-- Organization canonicalization (`canonicalize-organizations`, on by default):
-  cross-contact pass unifying company spellings to the majority variant
-- Self-organization removal: `ORG` repeating the person's own name is dropped
-- Dangling-title removal: titles without an organization (incl. orphaned by
-  organization removal) are dropped
-- Geo-coordinate address removal: coordinate-only addresses are dropped
-- Custom-field default list extended to `Age,Photo`
-- URL deduplication now ignores scheme, `www.` and trailing-slash differences
-- Label normalization extended to URL labels; orphaned `X-ABLabel`s are swept
-
-### Fixed
-
-- E-mail domain verification: DNS NODATA (domain exists, no MX/A records) is no
-  longer treated as non-existence, and NXDOMAIN must be confirmed by a second
-  lookup before any address is removed
-- Fax removal also catches Apple-style custom labels (`X-ABLabel: Work Fax`)
-- Validated GraalVM native image build (libphonenumber resource hints)
-
 ## [1.0.0] - 2026-07-20
 
 Initial release — the spiritual successor of
@@ -78,6 +41,36 @@ rebuilt for today's Google.
 - Report-only **duplicate contact detection** (shared phone/e-mail, near-identical or
   word-flipped names) — merge with Google's own "Merge & fix"
 
+**Cleaning rules — later additions (see below for the destructive set)**
+- Opt-in fax number removal (`remove-fax-numbers`): drops `TEL;TYPE=FAX` entries
+  (work and home)
+- Custom-field removal by label (`remove-custom-fields`, default `Age`): deletes
+  Apple-style `X-ABLabel` groups and `X-<label>` properties
+- XING profile URLs added to the URL cleanup (sync-app spam)
+- Export analysis prints a custom-field label inventory
+- Social profile URLs added to the URL cleanup (Facebook, Twitter/X, Bluesky,
+  Mastodon, Instagram, Threads, TikTok, Snapchat, Flickr, Vimeo, Foursquare,
+  about.me); LinkedIn and personal sites are kept
+- Organization removal by name (`remove-organizations`, empty by default) for
+  defunct companies
+- Label normalization (`normalize-labels`, on by default): custom e-mail/address
+  labels become standard vCard types ('Geschäftlich' → WORK) or are dropped for
+  the default type ('Internet email', 'Obsolete', ...)
+- Redundant address removal (`remove-redundant-addresses`, on by default): keeps
+  the richer of two addresses when one is a subset of the other
+
+- Organization canonicalization (`canonicalize-organizations`, on by default):
+  cross-contact pass unifying company spellings to the majority variant
+- Self-organization removal: `ORG` repeating the person's own name is dropped
+- Dangling-title removal: titles without an organization (incl. orphaned by
+  organization removal) are dropped
+- Geo-coordinate address removal: coordinate-only addresses are dropped
+- Custom-field default list extended to `Age,Photo`
+- URL deduplication now ignores scheme, `www.` and trailing-slash differences
+- Label normalization extended to URL labels; orphaned `X-ABLabel`s are swept
+- Junk name-suffix removal (on by default): parenthesized messenger-import
+  fragments like `(JIRA)` are dropped, honorific suffixes are kept
+
 **Cleaning rules (destructive, opt-in)**
 - Country-invalid phone number removal (libphonenumber validation)
 - Shared phone number removal (numbers on ≥ 2 contacts = switchboard/household line)
@@ -95,6 +88,16 @@ rebuilt for today's Google.
 - Offline analysis IT against a local Google CSV export (`test-data/`, gitignored)
   with per-rule hit counts, diffs and a residual-dirt scan
 - GitHub Actions CI/release pipelines, Dependabot, dependency review, auto-merge
+
+### Fixed (during pre-release hardening)
+- E-mail domain verification: DNS NODATA (domain exists, no MX/A records) is no
+  longer treated as non-existence, and NXDOMAIN must be confirmed by a second
+  lookup before any address is removed
+- Fax removal also catches Apple-style custom labels (`X-ABLabel: Work Fax`)
+- Validated GraalVM native image build (libphonenumber resource hints)
+- Google CardDAV fetch: PROPFIND + batched `addressbook-multiget` with `Depth: 0`
+  and bisect-and-retry on server errors (the original single `addressbook-query`
+  returned empty results)
 
 [Unreleased]: https://github.com/patbaumgartner/gmail-contacts-cleaner/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/patbaumgartner/gmail-contacts-cleaner/releases/tag/v1.0.0

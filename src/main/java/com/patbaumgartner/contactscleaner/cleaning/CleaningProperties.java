@@ -36,6 +36,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * domain authoritatively no longer exists (NXDOMAIN); DNS timeouts never count as proof
  * (<strong>destructive</strong> and requires network access, off by default)
  * @param trimNames trim whitespace around given/family/middle/formatted names
+ * @param removeJunkNameSuffixes drop parenthesized name suffixes like {@code (JIRA)} or
+ * {@code (whatsapp)} — messenger/phone import junk; real suffixes ({@code Jr.},
+ * {@code PMP}) are kept
  * @param normalizeLabels replace custom e-mail/address labels with the standard vCard
  * types: work/home variants (localized included) become {@code TYPE=WORK}/{@code HOME},
  * other custom labels ({@code Internet email}, {@code Obsolete}, ...) are dropped in
@@ -96,8 +99,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		@DefaultValue("true") boolean normalizeEmailAddresses,
 		@DefaultValue("true") boolean removeDuplicateEmailAddresses, @DefaultValue("true") boolean removeInvalidEmails,
 		@DefaultValue("false") boolean verifyEmailDomains, @DefaultValue("true") boolean trimNames,
-		@DefaultValue("true") boolean normalizeLabels, @DefaultValue("true") boolean removeEmptyProperties,
-		@DefaultValue("true") boolean removeRedundantAddresses,
+		@DefaultValue("true") boolean removeJunkNameSuffixes, @DefaultValue("true") boolean normalizeLabels,
+		@DefaultValue("true") boolean removeEmptyProperties, @DefaultValue("true") boolean removeRedundantAddresses,
 		@DefaultValue("true") boolean removeGeoCoordinateAddresses,
 		@DefaultValue("true") boolean detectDuplicateContacts, @DefaultValue("true") boolean repairFlippedNames,
 		@DefaultValue("true") boolean extractBirthdays, @DefaultValue("true") boolean removeSocialNetworkNotes,
@@ -121,8 +124,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 */
 	public static CleaningProperties defaults() {
 		return new CleaningProperties(true, "", true, false, false, true, true, true, false, true, true, true, true,
-				true, true, true, true, true, true, List.of("Age", "Photo"), List.of(), true, true, true, false, 2,
-				false, false);
+				true, true, true, true, true, true, true, List.of("Age", "Photo"), List.of(), true, true, true, false,
+				2, false, false);
 	}
 
 	/**
@@ -133,11 +136,11 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	public CleaningProperties withPhoneRegion(String phoneRegion) {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers, removeFaxNumbers,
 				removeInvalidPhoneNumbers, normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails,
-				verifyEmailDomains, trimNames, normalizeLabels, removeEmptyProperties, removeRedundantAddresses,
-				removeGeoCoordinateAddresses, detectDuplicateContacts, repairFlippedNames, extractBirthdays,
-				removeSocialNetworkNotes, cleanUrls, removeCustomFields, removeOrganizations, removeSelfOrganizations,
-				removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold,
-				removeNotes, deleteEmptyContacts);
+				verifyEmailDomains, trimNames, removeJunkNameSuffixes, normalizeLabels, removeEmptyProperties,
+				removeRedundantAddresses, removeGeoCoordinateAddresses, detectDuplicateContacts, repairFlippedNames,
+				extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeCustomFields, removeOrganizations,
+				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
+				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts);
 	}
 
 	/**
@@ -149,10 +152,10 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	public CleaningProperties withDestructiveOptions(boolean removeNotes, boolean deleteEmptyContacts) {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers, removeFaxNumbers,
 				removeInvalidPhoneNumbers, normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails,
-				verifyEmailDomains, trimNames, normalizeLabels, removeEmptyProperties, removeRedundantAddresses,
-				removeGeoCoordinateAddresses, detectDuplicateContacts, repairFlippedNames, extractBirthdays,
-				removeSocialNetworkNotes, cleanUrls, removeCustomFields, removeOrganizations, removeSelfOrganizations,
-				removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold,
-				removeNotes, deleteEmptyContacts);
+				verifyEmailDomains, trimNames, removeJunkNameSuffixes, normalizeLabels, removeEmptyProperties,
+				removeRedundantAddresses, removeGeoCoordinateAddresses, detectDuplicateContacts, repairFlippedNames,
+				extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeCustomFields, removeOrganizations,
+				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
+				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts);
 	}
 }
