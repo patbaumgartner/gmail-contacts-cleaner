@@ -19,6 +19,10 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * interpret national numbers like {@code 044 668 18 00}; empty disables E.164 formatting
  * and falls back to plain separator stripping
  * @param removeDuplicatePhoneNumbers drop repeated phone numbers within one contact
+ * @param removeInvalidPhoneNumbers drop phone numbers that are provably invalid for their
+ * country (wrong length, impossible prefix, undialable fragments) — judged via
+ * libphonenumber; national numbers are only judged when {@link #phoneRegion()} is set
+ * (<strong>destructive</strong>, off by default)
  * @param normalizeEmailAddresses lower-case and trim e-mail addresses
  * @param removeDuplicateEmailAddresses drop repeated e-mail addresses within one contact
  * @param removeInvalidEmails drop e-mail addresses that are not syntactically valid
@@ -62,7 +66,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties(prefix = "contacts-cleaner.cleaning")
 public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNumbers,
 		@DefaultValue("") String phoneRegion, @DefaultValue("true") boolean removeDuplicatePhoneNumbers,
-		@DefaultValue("true") boolean normalizeEmailAddresses,
+		@DefaultValue("false") boolean removeInvalidPhoneNumbers, @DefaultValue("true") boolean normalizeEmailAddresses,
 		@DefaultValue("true") boolean removeDuplicateEmailAddresses, @DefaultValue("true") boolean removeInvalidEmails,
 		@DefaultValue("false") boolean verifyEmailDomains, @DefaultValue("true") boolean trimNames,
 		@DefaultValue("true") boolean removeEmptyProperties, @DefaultValue("true") boolean detectDuplicateContacts,
@@ -77,8 +81,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 * @return default cleaning properties
 	 */
 	public static CleaningProperties defaults() {
-		return new CleaningProperties(true, "", true, true, true, true, false, true, true, true, false, true, true,
-				true, false, 2, false, false);
+		return new CleaningProperties(true, "", true, false, true, true, true, false, true, true, true, false, true,
+				true, true, false, 2, false, false);
 	}
 
 	/**
@@ -88,10 +92,10 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 */
 	public CleaningProperties withPhoneRegion(String phoneRegion) {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains,
-				trimNames, removeEmptyProperties, detectDuplicateContacts, mergeDuplicateContacts, extractBirthdays,
-				removeSocialNetworkNotes, cleanUrls, removeSharedPhoneNumbers, sharedPhoneNumberThreshold, removeNotes,
-				deleteEmptyContacts);
+				removeInvalidPhoneNumbers, normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails,
+				verifyEmailDomains, trimNames, removeEmptyProperties, detectDuplicateContacts, mergeDuplicateContacts,
+				extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeSharedPhoneNumbers,
+				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts);
 	}
 
 	/**
@@ -100,8 +104,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 */
 	public CleaningProperties withMergeDuplicateContacts() {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains,
-				trimNames, removeEmptyProperties, detectDuplicateContacts, true, extractBirthdays,
+				removeInvalidPhoneNumbers, normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails,
+				verifyEmailDomains, trimNames, removeEmptyProperties, detectDuplicateContacts, true, extractBirthdays,
 				removeSocialNetworkNotes, cleanUrls, removeSharedPhoneNumbers, sharedPhoneNumberThreshold, removeNotes,
 				deleteEmptyContacts);
 	}
@@ -114,9 +118,9 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 */
 	public CleaningProperties withDestructiveOptions(boolean removeNotes, boolean deleteEmptyContacts) {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains,
-				trimNames, removeEmptyProperties, detectDuplicateContacts, mergeDuplicateContacts, extractBirthdays,
-				removeSocialNetworkNotes, cleanUrls, removeSharedPhoneNumbers, sharedPhoneNumberThreshold, removeNotes,
-				deleteEmptyContacts);
+				removeInvalidPhoneNumbers, normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails,
+				verifyEmailDomains, trimNames, removeEmptyProperties, detectDuplicateContacts, mergeDuplicateContacts,
+				extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeSharedPhoneNumbers,
+				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts);
 	}
 }

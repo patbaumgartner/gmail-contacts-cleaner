@@ -14,8 +14,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DuplicateContactMergerTests {
 
 	private static CleaningProperties enabled() {
-		return new CleaningProperties(true, "", true, true, true, true, false, true, true, true, true, true, true, true,
-				false, 2, false, false);
+		return new CleaningProperties(true, "", true, false, true, true, true, false, true, true, true, true, true,
+				true, true, false, 2, false, false);
 	}
 
 	private final DuplicateContactMerger merger = new DuplicateContactMerger(enabled());
