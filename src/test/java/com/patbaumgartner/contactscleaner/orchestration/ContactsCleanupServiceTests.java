@@ -11,6 +11,7 @@ import com.patbaumgartner.contactscleaner.cleaning.CleaningProperties;
 import com.patbaumgartner.contactscleaner.cleaning.ContactCleaner;
 import com.patbaumgartner.contactscleaner.cleaning.DomainResolution;
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
+import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactMerger;
 import com.patbaumgartner.contactscleaner.cleaning.EmailDomainVerifier;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
 import org.junit.jupiter.api.Test;
@@ -73,7 +74,8 @@ class ContactsCleanupServiceTests {
 	private ContactsCleanupService service(AccountsProperties accounts,
 			com.patbaumgartner.contactscleaner.cleaning.CleaningProperties properties) {
 		return new ContactsCleanupService(accounts, this.cardDavClient, new ContactCleaner(properties),
-				new DuplicateContactDetector(properties), new SharedPhoneNumberRemover(properties),
+				new DuplicateContactDetector(properties), new DuplicateContactMerger(properties),
+				new SharedPhoneNumberRemover(properties),
 				new EmailDomainVerifier(properties, (domain) -> DomainResolution.DELIVERABLE), this.eventPublisher);
 	}
 
@@ -173,6 +175,40 @@ class ContactsCleanupServiceTests {
 
 		assertThat(service.cleanAllAccounts()).isEmpty();
 		verify(this.cardDavClient, never()).fetchAllContacts(any());
+	}
+
+	@Test
+	void mergesDuplicatesAndDeletesTheRedundantCard() {
+		GoogleAccount account = account(false);
+		var flipped = new AddressBookEntry("/contacts/flipped", "\"e5\"", """
+				BEGIN:VCARD
+				VERSION:3.0
+				FN:Muster Max
+				TEL:+41790000001
+				END:VCARD
+				""");
+		var original = new AddressBookEntry("/contacts/original", "\"e6\"", """
+				BEGIN:VCARD
+				VERSION:3.0
+				FN:Max Muster
+				TEL:+41790000001
+				EMAIL:max@example.com
+				END:VCARD
+				""");
+		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of(flipped, original));
+
+		var properties = CleaningProperties.defaults().withMergeDuplicateContacts();
+		var service = new ContactsCleanupService(new AccountsProperties(List.of(account)), this.cardDavClient,
+				new ContactCleaner(properties), new DuplicateContactDetector(properties),
+				new DuplicateContactMerger(properties), new SharedPhoneNumberRemover(properties),
+				new EmailDomainVerifier(properties, (domain) -> DomainResolution.DELIVERABLE), this.eventPublisher);
+
+		List<AccountCleanupResult> results = service.cleanAllAccounts();
+
+		assertThat(results.getFirst().deletedContacts()).isEqualTo(1);
+		verify(this.cardDavClient).deleteContact(account, flipped);
+		assertThat(results.getFirst().changes()).anyMatch((change) -> change.type() == ContactChange.Type.MERGED
+				&& change.addedLines().contains("merged into 'Max Muster'"));
 	}
 
 	@Test

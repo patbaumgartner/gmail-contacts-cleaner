@@ -60,6 +60,10 @@ contacts-cleaner:
     # Report-only: log contact pairs that look like duplicates of each other.
     # Nothing is merged or deleted automatically.
     detect-duplicate-contacts: "${CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS:true}"
+    # Automatically merge contacts that are provably the same person: identical
+    # name tokens (order-independent, 'Muster Max' == 'Max Muster') AND a shared
+    # phone or e-mail. Union of properties survives, redundant cards are deleted.
+    merge-duplicate-contacts: "${CONTACTS_CLEANER_MERGE_DUPLICATE_CONTACTS:false}"
     # Promote "Geburtstag: 12.03.1980"-style notes to a proper BDAY property.
     # Never overwrites an existing birthday, never modifies the note.
     extract-birthdays: "${CONTACTS_CLEANER_EXTRACT_BIRTHDAYS:true}"
@@ -74,6 +78,12 @@ contacts-cleaner:
     # Delete contacts carrying no information at all: no phone, no e-mail, no
     # birthday, no address, no URL, no note, no organization.
     delete-empty-contacts: "${CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS:false}"
+
+  # Single-page HTML report written after every run — open
+  # reports/cleanup-report-latest.html to review changes (ideal with dry-run).
+  report:
+    enabled: "${CONTACTS_CLEANER_REPORT_ENABLED:true}"
+    directory: "${CONTACTS_CLEANER_REPORT_DIRECTORY:reports}"
 
   # Accounts are configured via environment variables (relaxed binding) or a local
   # .env / application-local.yml. Example:
