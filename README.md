@@ -109,7 +109,7 @@ Safety first:
 | Invalid e-mail removal | `franz@`, `+41791234567` in the e-mail field → dropped (can never receive mail) | ✅ on |
 | Invalid phone removal | `*133#`, `12 9001`, `+4144` — wrong length/undialable for the country → dropped | ⛔ opt-in |
 | Fax number removal | `TEL;TYPE=FAX` (work + home) → dropped — it is not 1995 | ⛔ opt-in |
-| E-mail domain verification | DNS lookup: domain gone (NXDOMAIN) → address dropped; timeouts never count | ⛔ opt-in |
+| E-mail domain verification | DNS: address dropped only on double-confirmed NXDOMAIN; NODATA/timeouts/mail-only domains always kept | ⛔ opt-in |
 | Shared phone number removal | number on ≥ 2 contacts = switchboard/household line → dropped, direct lines kept | ⛔ opt-in |
 | Note removal | deletes free-text notes | ⛔ opt-in |
 | Empty contact deletion | no phone, e-mail, birthday, address, URL, note **or** org → delete | ⛔ opt-in |

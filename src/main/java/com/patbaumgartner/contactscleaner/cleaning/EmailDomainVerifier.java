@@ -23,8 +23,12 @@ import org.springframework.stereotype.Component;
  * <p>
  * Deliberately cautious:
  * <ul>
- * <li>an address is removed only on an authoritative <strong>NXDOMAIN</strong>; DNS
- * timeouts or server errors never count as proof (fail-open),</li>
+ * <li>an address is removed only on an authoritative <strong>NXDOMAIN</strong>,
+ * <em>confirmed by a second independent lookup</em>; DNS timeouts, server errors and
+ * empty answers (domain exists but has no MX/A records) never count as proof
+ * (fail-open),</li>
+ * <li>a mail-only domain without any website is deliverable by its MX record and is
+ * kept,</li>
  * <li>each domain is resolved once per run and cached — 5000 contacts at the same three
  * employers cause three lookups, not thousands,</li>
  * <li>disabled by default (network access + destructive); enable via
@@ -64,7 +68,7 @@ public class EmailDomainVerifier {
 				if (domain == null) {
 					continue;
 				}
-				DomainResolution resolution = cache.computeIfAbsent(domain, this.domainResolver::resolve);
+				DomainResolution resolution = cache.computeIfAbsent(domain, this::resolveWithConfirmation);
 				if (resolution == DomainResolution.NON_EXISTENT) {
 					log.info("Removing undeliverable address {} (domain {} does not exist) from '{}'", address, domain,
 							displayName(vcard));
@@ -76,6 +80,23 @@ public class EmailDomainVerifier {
 		long dead = cache.values().stream().filter((r) -> r == DomainResolution.NON_EXISTENT).count();
 		log.debug("Verified {} distinct mail domains, {} non-existent", cache.size(), dead);
 		return changed;
+	}
+
+	/**
+	 * A domain counts as non-existent only when two independent lookups both return
+	 * NXDOMAIN — one flaky resolver answer must never delete an address.
+	 */
+	private DomainResolution resolveWithConfirmation(String domain) {
+		DomainResolution first = this.domainResolver.resolve(domain);
+		if (first != DomainResolution.NON_EXISTENT) {
+			return first;
+		}
+		DomainResolution second = this.domainResolver.resolve(domain);
+		if (second == DomainResolution.NON_EXISTENT) {
+			return DomainResolution.NON_EXISTENT;
+		}
+		log.warn("Domain {} returned NXDOMAIN once but not twice — keeping its addresses", domain);
+		return DomainResolution.UNKNOWN;
 	}
 
 	private String domainOf(String address) {
