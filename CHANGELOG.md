@@ -14,9 +14,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Apple-style `X-ABLabel` groups and `X-<label>` properties
 - XING profile URLs added to the URL cleanup (sync-app spam)
 - Export analysis prints a custom-field label inventory
-- Facebook profile URLs added to the URL cleanup
+- Social profile URLs added to the URL cleanup (Facebook, Twitter/X, Bluesky,
+  Mastodon, Instagram, Threads, TikTok, Snapchat, Flickr, Vimeo, Foursquare,
+  about.me); LinkedIn and personal sites are kept
 - Organization removal by name (`remove-organizations`, empty by default) for
   defunct companies
+- Label normalization (`normalize-labels`, on by default): custom e-mail/address
+  labels become standard vCard types ('Geschäftlich' → WORK) or are dropped for
+  the default type ('Internet email', 'Obsolete', ...)
 - Redundant address removal (`remove-redundant-addresses`, on by default): keeps
   the richer of two addresses when one is a subset of the other
 

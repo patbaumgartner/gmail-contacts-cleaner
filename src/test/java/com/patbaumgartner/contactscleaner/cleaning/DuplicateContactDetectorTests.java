@@ -108,7 +108,7 @@ class DuplicateContactDetectorTests {
 	@Test
 	void returnsEmptyWhenDetectionIsDisabled() {
 		var disabled = new DuplicateContactDetector(new CleaningProperties(true, "", true, false, false, true, true,
-				true, true, false, true, true, false, false, true, true, true, java.util.List.of("Age"),
+				true, true, false, true, true, true, false, false, true, true, true, java.util.List.of("Age"),
 				java.util.List.of(), false, 3, false, false));
 
 		assertThat(disabled
