@@ -8,6 +8,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Name repair also flips "Last, First" display names (`Muster, Max` →
+  `Max Muster`), populating empty given/family fields; company-style names
+  and contradicting structured names are never touched
 - Instant-messenger removal (`remove-instant-messengers`, on by default): drops
   IMPP handles of dead networks (ICQ, AIM, Yahoo, Skype, ...)
 - Empty-property rule also removes blank and exact-duplicate extended properties
