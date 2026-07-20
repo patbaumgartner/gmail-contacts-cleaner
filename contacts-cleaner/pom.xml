@@ -1,0 +1,505 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.0</version>
+    <relativePath></relativePath>
+    <!-- lookup parent from repository -->
+  </parent>
+
+  <groupId>com.patbaumgartner</groupId>
+  <artifactId>contacts-cleaner</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+
+  <name>contacts-cleaner</name>
+  <description>Cleans and deduplicates Google Contacts across multiple accounts via CardDAV</description>
+
+  <properties>
+    <!--
+    Handy maintenance commands:
+
+    mvn versions:display-plugin-updates
+
+    mvn versions:update-parent \
+    "-Dmaven.version.ignore=.*-M.*,.*-SNAPSHOT.*,.*-beta.*,.*-rc.*,.*-alpha.*,.*-ea.*,.*-preview.*,.*-milestone.*"
+
+    mvn versions:update-properties \
+      -DallowSnapshots=false \
+    "-Dmaven.version.ignore=.*-M.*,.*-SNAPSHOT.*,.*-beta.*,.*-rc.*,.*-alpha.*,.*-ea.*,.*-preview.*,.*-milestone.*"
+
+    mvn dependency-check:check
+    mvn jacoco:report
+    mvn spotbugs:check
+    mvn pitest:mutationCoverage
+    -->
+    <java.version>25</java.version>
+
+    <!-- External Library Versions -->
+    <spring-modulith.version>2.1.0</spring-modulith.version>
+    <ez-vcard.version>0.12.2</ez-vcard.version>
+    <taikai.version>1.64.0</taikai.version>
+
+    <!-- Maven Core Plugins -->
+    <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
+    <maven-failsafe-plugin.version>3.5.6</maven-failsafe-plugin.version>
+    <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
+
+    <!-- Code Quality & Coverage Plugins -->
+    <jacoco.version>0.8.15</jacoco.version>
+    <pitest.version>1.25.7</pitest.version>
+    <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
+    <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
+    <spotbugs.version>4.10.3.0</spotbugs.version>
+    <findsecbugs-plugin.version>1.14.0</findsecbugs-plugin.version>
+    <spring-javaformat.version>0.0.47</spring-javaformat.version>
+
+    <!-- Security & Dependency Management Plugins -->
+    <dependency-check.version>12.2.2</dependency-check.version>
+    <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
+
+    <!-- Coverage & Quality Thresholds -->
+    <jacoco.branch.coverage.minimum>0.75</jacoco.branch.coverage.minimum>
+    <jacoco.line.coverage.minimum>0.80</jacoco.line.coverage.minimum>
+    <pitest.coverage.threshold>0</pitest.coverage.threshold>
+    <pitest.mutation.threshold>0</pitest.mutation.threshold>
+
+    <!--
+      NVD API key used by OWASP dependency-check. Override via:
+        - command line: -DnvdApiKey=...
+        - environment variable: NVD_API_KEY (Maven exposes env vars as ${env.NVD_API_KEY})
+      Empty by default so the build does not leak credentials and runs without a key (slower).
+    -->
+    <nvdApiKey></nvdApiKey>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.modulith</groupId>
+        <artifactId>spring-modulith-bom</artifactId>
+        <version>${spring-modulith.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-restclient</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.modulith</groupId>
+      <artifactId>spring-modulith-starter-core</artifactId>
+    </dependency>
+
+    <!-- vCard 3.0/4.0 parsing and writing (CardDAV payloads) -->
+    <dependency>
+      <groupId>com.googlecode.ez-vcard</groupId>
+      <artifactId>ez-vcard</artifactId>
+      <version>${ez-vcard.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-restclient-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.modulith</groupId>
+      <artifactId>spring-modulith-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.enofex</groupId>
+      <artifactId>taikai</artifactId>
+      <version>${taikai.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <filtering>true</filtering>
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
+    <plugins>
+      <!-- Build Environment Enforcement -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>enforce-maven</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>3.6.3</version>
+                </requireMavenVersion>
+                <requireJavaVersion>
+                  <version>${java.version}</version>
+                </requireJavaVersion>
+                <bannedDependencies>
+                  <searchTransitive>true</searchTransitive>
+                  <excludes>
+                    <exclude>log4j:log4j</exclude>
+                  </excludes>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Dependency Management -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>versions-maven-plugin</artifactId>
+        <configuration>
+          <generateBackupPoms>false</generateBackupPoms>
+          <rulesUri>file:///${session.executionRootDirectory}/.mvn/maven-version-rules.xml</rulesUri>
+        </configuration>
+      </plugin>
+
+      <!-- Security Vulnerability Scanning -->
+      <plugin>
+        <groupId>org.owasp</groupId>
+        <artifactId>dependency-check-maven</artifactId>
+        <version>${dependency-check.version}</version>
+        <configuration>
+          <failBuildOnCVSS>10</failBuildOnCVSS>
+          <skipTestScope>true</skipTestScope>
+          <formats>
+            <format>ALL</format>
+          </formats>
+          <suppressionFile>${project.basedir}/.mvn/owasp-suppression.xml</suppressionFile>
+          <!-- NVD API Configuration for enhanced vulnerability data. Provide via -DnvdApiKey=... or
+          env var NVD_API_KEY. -->
+          <nvdApiKey>${nvdApiKey}</nvdApiKey>
+          <nvdMaxRetryCount>3</nvdMaxRetryCount>
+          <nvdApiDelay>2000</nvdApiDelay>
+          <!-- Disable analyzers that require external tools not available -->
+          <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+          <nodeAnalyzerEnabled>false</nodeAnalyzerEnabled>
+          <nodeAuditAnalyzerEnabled>false</nodeAuditAnalyzerEnabled>
+          <retireJsAnalyzerEnabled>false</retireJsAnalyzerEnabled>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Git Information -->
+      <plugin>
+        <groupId>io.github.git-commit-id</groupId>
+        <artifactId>git-commit-id-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- SBOM Generation -->
+      <plugin>
+        <groupId>org.cyclonedx</groupId>
+        <artifactId>cyclonedx-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- Code Formatting -->
+      <plugin>
+        <groupId>io.spring.javaformat</groupId>
+        <artifactId>spring-javaformat-maven-plugin</artifactId>
+        <version>${spring-javaformat.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>validate</goal>
+            </goals>
+            <phase>validate</phase>
+            <inherited>true</inherited>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Compilation -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.springframework.boot</groupId>
+              <artifactId>spring-boot-configuration-processor</artifactId>
+            </path>
+          </annotationProcessorPaths>
+          <release>${java.version}</release>
+        </configuration>
+      </plugin>
+
+      <!-- Test Execution -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>@{jacoco.argLine} -Xmx1024m</argLine>
+          <includes>
+            <include>**/*Test.java</include>
+            <include>**/*Tests.java</include>
+          </includes>
+          <systemPropertyVariables>
+            <spring.profiles.active>test</spring.profiles.active>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+
+      <!-- Integration Tests -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <argLine>-Xmx2048m</argLine>
+          <includes>
+            <include>**/*IT.java</include>
+            <include>**/*IntegrationTest.java</include>
+          </includes>
+          <systemPropertyVariables>
+            <spring.profiles.active>integration-test</spring.profiles.active>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Code Coverage -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <configuration>
+          <propertyName>jacoco.argLine</propertyName>
+          <append>true</append>
+        </configuration>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <propertyName>jacoco.argLine</propertyName>
+              <append>true</append>
+            </configuration>
+          </execution>
+          <execution>
+            <id>jacoco-report</id>
+            <goals>
+              <goal>report</goal>
+            </goals>
+            <phase>test</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Mutation Testing -->
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>${pitest.version}</version>
+        <configuration>
+          <targetClasses>
+            <param>com.patbaumgartner.contactscleaner.*</param>
+          </targetClasses>
+          <targetTests>
+            <param>com.patbaumgartner.contactscleaner.*</param>
+          </targetTests>
+          <mutationThreshold>${pitest.mutation.threshold}</mutationThreshold>
+          <coverageThreshold>${pitest.coverage.threshold}</coverageThreshold>
+          <excludedClasses>
+            <param>com.patbaumgartner.contactscleaner.ContactsCleanerApplication</param>
+            <param>com.patbaumgartner.contactscleaner.config.*</param>
+          </excludedClasses>
+          <outputFormats>
+            <outputFormat>HTML</outputFormat>
+            <outputFormat>XML</outputFormat>
+          </outputFormats>
+          <jvmArgs>
+            <jvmArg>-Xmx1024m</jvmArg>
+          </jvmArgs>
+          <useClasspathJar>true</useClasspathJar>
+          <verbose>false</verbose>
+          <timestampedReports>false</timestampedReports>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-junit5-plugin</artifactId>
+            <version>${pitest-junit5-plugin.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <!-- Static Code Analysis -->
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>${spotbugs.version}</version>
+        <configuration>
+          <effort>Max</effort>
+          <threshold>Low</threshold>
+          <failOnError>true</failOnError>
+          <excludeFilterFile>${project.basedir}/.mvn/spotbugs-exclude.xml</excludeFilterFile>
+          <plugins>
+            <plugin>
+              <groupId>com.h3xstream.findsecbugs</groupId>
+              <artifactId>findsecbugs-plugin</artifactId>
+              <version>${findsecbugs-plugin.version}</version>
+            </plugin>
+          </plugins>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- POM Organization -->
+      <plugin>
+        <groupId>com.github.ekryd.sortpom</groupId>
+        <artifactId>sortpom-maven-plugin</artifactId>
+        <version>${sortpom-maven-plugin.version}</version>
+        <configuration>
+          <predefinedSortOrder>custom_1</predefinedSortOrder>
+          <lineSeparator>\n</lineSeparator>
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <sortProperties>false</sortProperties>
+          <keepBlankLines>true</keepBlankLines>
+          <sortDependencies>scope</sortDependencies>
+          <createBackupFile>false</createBackupFile>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>sort</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Spring Boot Application -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <layers>
+            <enabled>true</enabled>
+          </layers>
+          <image>
+            <name>docker.io/patbaumgartner/${project.artifactId}:${project.version}</name>
+            <builder>paketobuildpacks/builder-noble-java-tiny:latest</builder>
+            <pullPolicy>IF_NOT_PRESENT</pullPolicy>
+            <env>
+              <BP_JVM_VERSION>25</BP_JVM_VERSION>
+              <BPE_DELIM_JAVA_TOOL_OPTIONS xml:space="preserve"> </BPE_DELIM_JAVA_TOOL_OPTIONS>
+              <BPE_APPEND_JAVA_TOOL_OPTIONS>-Dstdout.encoding=UTF-8</BPE_APPEND_JAVA_TOOL_OPTIONS>
+            </env>
+          </image>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build-info</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!--
+      GraalVM native-image build (activate with -Pnative). Extends the `native`
+      profile inherited from spring-boot-starter-parent.
+
+      Spring evaluates @ConditionalOnProperty at AOT (build) time, so the
+      `server` profile (long-running scheduler mode) is baked into the native
+      image. This matches the production container, which runs with
+      SPRING_PROFILES_ACTIVE=server.
+    -->
+    <profile>
+      <id>native</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <configuration>
+              <buildArgs>
+                <!-- Broadly compatible x86-64 baseline for NAS / home-server deployments. -->
+                <buildArg>-march=x86-64-v2</buildArg>
+              </buildArgs>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <configuration>
+              <image>
+                <env>
+                  <!-- Force a native image build inside the buildpack. -->
+                  <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
+                  <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>-march=x86-64-v2</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
+                </env>
+              </image>
+            </configuration>
+            <executions>
+              <execution>
+                <id>process-aot</id>
+                <configuration>
+                  <jvmArguments>-Dspring.profiles.active=server</jvmArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

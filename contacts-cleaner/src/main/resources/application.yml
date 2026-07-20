@@ -1,0 +1,68 @@
+application:
+  version: "@project.version@"
+
+spring:
+  application:
+    name: contacts-cleaner
+  config:
+    import:
+      - "optional:file:../.env[.properties]"
+      - "optional:file:.env[.properties]"
+  main:
+    web-application-type: none
+    banner-mode: console
+  threads:
+    virtual:
+      enabled: true
+
+logging:
+  level:
+    org.springframework: INFO
+    com.patbaumgartner: DEBUG
+    root: INFO
+
+contacts-cleaner:
+  # One-shot run at startup (default mode for containers driven by external cron).
+  # The `server` profile disables it in favor of the built-in nightly scheduler.
+  startup-run:
+    enabled: "${CONTACTS_CLEANER_STARTUP_RUN_ENABLED:true}"
+
+  # Built-in scheduler — enabled by the `server` profile.
+  scheduler:
+    enabled: "${CONTACTS_CLEANER_SCHEDULER_ENABLED:false}"
+    cron: "${CONTACTS_CLEANER_SCHEDULER_CRON:0 0 3 * * *}"
+    zone: "${CONTACTS_CLEANER_SCHEDULER_ZONE:Europe/Zurich}"
+
+  # Google CardDAV endpoint — override base-url only for testing.
+  carddav:
+    base-url: "${CONTACTS_CLEANER_CARDDAV_BASE_URL:https://www.google.com}"
+    connect-timeout: 10s
+    read-timeout: 60s
+    request-delay: 200ms
+
+  # Cleaning rules. Destructive options are opt-in.
+  cleaning:
+    normalize-phone-numbers: "${CONTACTS_CLEANER_NORMALIZE_PHONE_NUMBERS:true}"
+    remove-duplicate-phone-numbers: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_PHONE_NUMBERS:true}"
+    normalize-email-addresses: "${CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES:true}"
+    remove-duplicate-email-addresses: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES:true}"
+    trim-names: "${CONTACTS_CLEANER_TRIM_NAMES:true}"
+    remove-notes: "${CONTACTS_CLEANER_REMOVE_NOTES:false}"
+    delete-empty-contacts: "${CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS:false}"
+
+  # Accounts are configured via environment variables (relaxed binding) or a local
+  # .env / application-local.yml. Example:
+  #
+  #   CONTACTSCLEANER_ACCOUNTS_0_NAME=personal
+  #   CONTACTSCLEANER_ACCOUNTS_0_EMAIL=jane.doe@gmail.com
+  #   CONTACTSCLEANER_ACCOUNTS_0_APPPASSWORD=abcd efgh ijkl mnop
+  #   CONTACTSCLEANER_ACCOUNTS_1_NAME=work
+  #   ...
+  #
+  # See .env.example at the repository root for the full reference.
+  # accounts:
+  #   - name: personal
+  #     email: jane.doe@gmail.com
+  #     app-password: "abcd efgh ijkl mnop"
+  #     enabled: true
+  #     dry-run: false
