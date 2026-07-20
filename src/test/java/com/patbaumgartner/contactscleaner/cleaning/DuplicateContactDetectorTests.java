@@ -65,8 +65,8 @@ class DuplicateContactDetectorTests {
 
 	@Test
 	void handlesNamesWithRepeatedTokens() {
-		List<DuplicateCandidate> candidates = detector.detect(
-				List.of(contact("Fritz Fritz", "+41791111111", null), contact("Max Muster", "+41792222222", null)));
+		List<DuplicateCandidate> candidates = detector
+			.detect(List.of(contact("Fritz Fritz", "+41791111111", null), contact("Max Muster", "+41792222222", null)));
 
 		assertThat(candidates).isEmpty();
 	}

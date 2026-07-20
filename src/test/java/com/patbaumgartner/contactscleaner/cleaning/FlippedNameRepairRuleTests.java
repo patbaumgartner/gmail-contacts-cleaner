@@ -45,10 +45,10 @@ class FlippedNameRepairRuleTests {
 
 	@Test
 	void foldsAccentsWhenMatching() {
-		VCard vcard = contact("García", "Adrian", "jose.garcia@example.com");
+		VCard vcard = contact("García", "José", "jose.garcia@example.com");
 
 		assertThat(this.rule.apply(vcard)).isTrue();
-		assertThat(vcard.getStructuredName().getGiven()).isEqualTo("Adrian");
+		assertThat(vcard.getStructuredName().getGiven()).isEqualTo("José");
 	}
 
 	@Test
