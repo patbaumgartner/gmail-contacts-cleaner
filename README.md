@@ -97,6 +97,7 @@ Safety first:
 | E-mail normalization | ` Jane.Doe@GMAIL.com ` → `jane.doe@gmail.com` | ✅ on |
 | Duplicate e-mail removal | keeps the first occurrence | ✅ on |
 | Name trimming | `" Jane  Doe "` → `"Jane Doe"` | ✅ on |
+| Junk name-suffix removal | `(JIRA)`, `(whatsapp)` import fragments dropped; `Jr.`/`PMP` kept | ✅ on |
 | Label normalization | custom labels → standard types: `Geschäftlich` → `WORK`, `Internet email`/`Obsolete` → default | ✅ on |
 | Empty property removal | `EMAIL:`, `ORG:;;`, all-blank `ADR` → dropped | ✅ on |
 | Duplicate **contact** detection | two cards sharing a phone/e-mail, near-identical or word-flipped names → **reported, not touched** (merge them with Google's own "Merge & fix") | ✅ on (report-only) |
@@ -255,6 +256,7 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES` | `true` | Lower-case + trim |
 | `CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES` | `true` | Deduplicate per contact |
 | `CONTACTS_CLEANER_TRIM_NAMES` | `true` | Trim name whitespace |
+| `CONTACTS_CLEANER_REMOVE_JUNK_NAME_SUFFIXES` | `true` | Drop parenthesized import junk from name suffixes |
 | `CONTACTS_CLEANER_NORMALIZE_LABELS` | `true` | Custom e-mail/address labels → standard vCard types |
 | `CONTACTS_CLEANER_REMOVE_EMPTY_PROPERTIES` | `true` | Drop blank `TEL`/`EMAIL`/`URL`/`NOTE`, all-blank `ORG`/`ADR` |
 | `CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS` | `true` | Report-only: log likely duplicate contact pairs |
