@@ -19,6 +19,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   defunct companies
 - Redundant address removal (`remove-redundant-addresses`, on by default): keeps
   the richer of two addresses when one is a subset of the other
+
+### Fixed
+
+- E-mail domain verification: DNS NODATA (domain exists, no MX/A records) is no
+  longer treated as non-existence, and NXDOMAIN must be confirmed by a second
+  lookup before any address is removed
+- Fax removal also catches Apple-style custom labels (`X-ABLabel: Work Fax`)
 - Validated GraalVM native image build (libphonenumber resource hints)
 
 ## [1.0.0] - 2026-07-20

@@ -38,6 +38,32 @@ class EmailDomainVerifierTests {
 	}
 
 	@Test
+	void nxdomainRequiresConfirmationByASecondLookup() {
+		AtomicInteger lookups = new AtomicInteger();
+		// First lookup says NXDOMAIN, second says UNKNOWN (flaky resolver) — keep.
+		var verifier = new EmailDomainVerifier(enabled(), (domain) -> (lookups.incrementAndGet() == 1)
+				? DomainResolution.NON_EXISTENT : DomainResolution.UNKNOWN);
+		VCard vcard = contact("jane@flaky.example");
+
+		assertThat(verifier.removeUndeliverableAddresses(List.of(vcard))).isEmpty();
+		assertThat(vcard.getEmails()).hasSize(1);
+		assertThat(lookups.get()).isEqualTo(2);
+	}
+
+	@Test
+	void confirmedNxdomainIsRemovedWithExactlyTwoLookups() {
+		AtomicInteger lookups = new AtomicInteger();
+		var verifier = new EmailDomainVerifier(enabled(), (domain) -> {
+			lookups.incrementAndGet();
+			return DomainResolution.NON_EXISTENT;
+		});
+		VCard vcard = contact("jane@dead.example");
+
+		assertThat(verifier.removeUndeliverableAddresses(List.of(vcard))).containsExactly(vcard);
+		assertThat(lookups.get()).isEqualTo(2);
+	}
+
+	@Test
 	void neverRemovesOnDnsUncertainty() {
 		var verifier = new EmailDomainVerifier(enabled(), (domain) -> DomainResolution.UNKNOWN);
 		VCard vcard = contact("jane@flaky-dns.example");
