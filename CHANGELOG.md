@@ -14,6 +14,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Apple-style `X-ABLabel` groups and `X-<label>` properties
 - XING profile URLs added to the URL cleanup (sync-app spam)
 - Export analysis prints a custom-field label inventory
+- Facebook profile URLs added to the URL cleanup
+- Organization removal by name (`remove-organizations`, empty by default) for
+  defunct companies
+- Redundant address removal (`remove-redundant-addresses`, on by default): keeps
+  the richer of two addresses when one is a subset of the other
 - Validated GraalVM native image build (libphonenumber resource hints)
 
 ## [1.0.0] - 2026-07-20

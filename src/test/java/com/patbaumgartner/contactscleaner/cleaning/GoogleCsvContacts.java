@@ -76,6 +76,22 @@ final class GoogleCsvContacts {
 		for (int i = 1; i <= 2; i++) {
 			multiValues(row.get("Website " + i + " - Value")).forEach(vcard::addUrl);
 		}
+		for (int i = 1; i <= 2; i++) {
+			ezvcard.property.Address address = new ezvcard.property.Address();
+			address.setStreetAddress(emptyToNull(row.get("Address " + i + " - Street")));
+			address.setLocality(emptyToNull(row.get("Address " + i + " - City")));
+			address.setPoBox(emptyToNull(row.get("Address " + i + " - PO Box")));
+			address.setRegion(emptyToNull(row.get("Address " + i + " - Region")));
+			address.setPostalCode(emptyToNull(row.get("Address " + i + " - Postal Code")));
+			address.setCountry(emptyToNull(row.get("Address " + i + " - Country")));
+			address.setExtendedAddress(emptyToNull(row.get("Address " + i + " - Extended Address")));
+			boolean empty = address.getStreetAddress() == null && address.getLocality() == null
+					&& address.getPoBox() == null && address.getRegion() == null && address.getPostalCode() == null
+					&& address.getCountry() == null && address.getExtendedAddress() == null;
+			if (!empty) {
+				vcard.addAddress(address);
+			}
+		}
 		for (int i = 1; i <= 3; i++) {
 			String label = row.getOrDefault("Custom Field " + i + " - Label", "");
 			String value = row.getOrDefault("Custom Field " + i + " - Value", "");

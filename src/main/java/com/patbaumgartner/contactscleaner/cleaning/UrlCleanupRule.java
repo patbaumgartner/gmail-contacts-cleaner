@@ -35,7 +35,8 @@ final class UrlCleanupRule implements VCardCleaningRule {
 			Pattern.compile(".*\\bgravatar\\.com/.*"), Pattern.compile(".*\\bplus\\.google\\.com/.*"),
 			Pattern.compile(".*\\bprofiles\\.google\\.com/.*"), Pattern.compile(".*\\bgoogle\\.com/profiles.*"),
 			Pattern.compile(".*\\bpicasaweb\\.google\\.[a-z.]+/.*"), Pattern.compile(".*\\bfriendfeed\\.com/.*"),
-			Pattern.compile(".*\\bxing\\.com/.*"));
+			Pattern.compile(".*\\bxing\\.com/.*"), Pattern.compile(".*\\bfacebook\\.com/.*"),
+			Pattern.compile(".*\\bfb\\.com/.*"));
 
 	@Override
 	public boolean apply(VCard vcard) {
