@@ -71,6 +71,10 @@ contacts-cleaner:
     # (authoritative NXDOMAIN only — DNS timeouts never count). Needs network access.
     verify-email-domains: "${CONTACTS_CLEANER_VERIFY_EMAIL_DOMAINS:false}"
     trim-names: "${CONTACTS_CLEANER_TRIM_NAMES:true}"
+    # Replace custom e-mail/address labels with standard vCard types: work/home
+    # variants (incl. German) become TYPE=WORK/HOME, other custom labels
+    # ('Internet email', 'Obsolete', ...) are dropped for the default type.
+    normalize-labels: "${CONTACTS_CLEANER_NORMALIZE_LABELS:true}"
     # Drop properties whose value is entirely blank (empty TEL/EMAIL/URL/NOTE,
     # all-blank ORG/ADR) — sync debris, considered non-destructive.
     remove-empty-properties: "${CONTACTS_CLEANER_REMOVE_EMPTY_PROPERTIES:true}"

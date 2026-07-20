@@ -28,15 +28,23 @@ import ezvcard.property.Url;
 final class UrlCleanupRule implements VCardCleaningRule {
 
 	/**
-	 * Host fragments of services that are shut down or pure sync plumbing. Matched
-	 * against the lower-cased URL.
+	 * Host fragments of services that are shut down, pure sync plumbing, or social
+	 * networks whose profile links were bulk-injected by sync apps (Twitter/X, Bluesky,
+	 * Mastodon, Instagram, ...). Matched against the lower-cased URL. LinkedIn and
+	 * personal websites are kept.
 	 */
 	private static final List<Pattern> DEAD_SERVICE_PATTERNS = List.of(Pattern.compile(".*\\bklout\\.com/.*"),
 			Pattern.compile(".*\\bgravatar\\.com/.*"), Pattern.compile(".*\\bplus\\.google\\.com/.*"),
 			Pattern.compile(".*\\bprofiles\\.google\\.com/.*"), Pattern.compile(".*\\bgoogle\\.com/profiles.*"),
 			Pattern.compile(".*\\bpicasaweb\\.google\\.[a-z.]+/.*"), Pattern.compile(".*\\bfriendfeed\\.com/.*"),
 			Pattern.compile(".*\\bxing\\.com/.*"), Pattern.compile(".*\\bfacebook\\.com/.*"),
-			Pattern.compile(".*\\bfb\\.com/.*"));
+			Pattern.compile(".*\\bfb\\.com/.*"), Pattern.compile(".*\\btwitter\\.com/.*"),
+			Pattern.compile("(?:https?://)?(?:www\\.)?x\\.com/.*"), Pattern.compile(".*\\bt\\.co/.*"),
+			Pattern.compile(".*\\bbsky\\.(app|social)/.*"), Pattern.compile(".*\\bmastodon\\.[a-z.]+/.*"),
+			Pattern.compile(".*\\binstagram\\.com/.*"), Pattern.compile(".*\\bthreads\\.net/.*"),
+			Pattern.compile(".*\\btiktok\\.com/.*"), Pattern.compile(".*\\bsnapchat\\.com/.*"),
+			Pattern.compile(".*\\bflickr\\.com/.*"), Pattern.compile(".*\\bvimeo\\.com/.*"),
+			Pattern.compile(".*\\bfoursquare\\.com/.*"), Pattern.compile(".*\\babout\\.me/.*"));
 
 	@Override
 	public boolean apply(VCard vcard) {

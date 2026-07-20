@@ -42,6 +42,9 @@ public class ContactCleaner {
 		if (properties.trimNames()) {
 			rules.add(new NameTrimmingRule());
 		}
+		if (properties.normalizeLabels()) {
+			rules.add(new LabelNormalizationRule());
+		}
 		// Runs after e-mail normalization would be ideal, but the rule normalizes
 		// e-mail local parts itself; placed here so repaired names flow into all
 		// later reporting.
