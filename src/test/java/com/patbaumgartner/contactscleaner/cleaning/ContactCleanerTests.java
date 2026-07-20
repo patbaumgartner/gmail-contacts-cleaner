@@ -94,8 +94,8 @@ class ContactCleanerTests {
 
 	@Test
 	void disabledRulesAreNotApplied() {
-		ContactCleaner cleaner = new ContactCleaner(new CleaningProperties(false, "", false, false, false, false, false,
-				false, false, false, true, true, true, false, true, true, false, false, false, false, false,
+		ContactCleaner cleaner = new ContactCleaner(new CleaningProperties(false, "", false, true, false, false, false,
+				false, false, false, false, true, true, true, false, true, true, false, false, false, false, false,
 				java.util.List.of("Age"), java.util.List.of(), true, true, true, false, 3, false, false));
 		VCard vcard = new VCard();
 		vcard.addTelephoneNumber(new Telephone("+41 44 668 18 00"));
