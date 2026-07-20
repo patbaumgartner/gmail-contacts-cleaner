@@ -13,8 +13,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EmailDomainVerifierTests {
 
 	private static CleaningProperties enabled() {
-		return new CleaningProperties(true, "", true, false, true, true, true, true, true, true, true, false, true,
-				true, true, false, 3, false, false);
+		return new CleaningProperties(true, "", true, false, false, true, true, true, true, true, true, true, false,
+				true, true, true, false, 3, false, false);
 	}
 
 	private static VCard contact(String... addresses) {

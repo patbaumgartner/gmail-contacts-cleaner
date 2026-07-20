@@ -6,6 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Opt-in fax number removal (`remove-fax-numbers`): drops `TEL;TYPE=FAX` entries
+  (work and home)
+- Validated GraalVM native image build (libphonenumber resource hints)
+
 ## [1.0.0] - 2026-07-20
 
 Initial release — the spiritual successor of

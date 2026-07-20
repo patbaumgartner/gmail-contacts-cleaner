@@ -48,6 +48,9 @@ public class ContactCleaner {
 		if (properties.normalizePhoneNumbers()) {
 			rules.add(new PhoneNumberNormalizationRule(properties.phoneRegion()));
 		}
+		if (properties.removeFaxNumbers()) {
+			rules.add(new FaxNumberRemovalRule());
+		}
 		if (properties.removeInvalidPhoneNumbers()) {
 			rules.add(new InvalidPhoneNumberRemovalRule(properties.phoneRegion()));
 		}

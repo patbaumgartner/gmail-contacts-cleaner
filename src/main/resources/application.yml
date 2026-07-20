@@ -51,6 +51,8 @@ contacts-cleaner:
     # undialable fragments like '*133#' or '12 9001') — judged via libphonenumber.
     # National numbers are only judged when phone-region is set.
     remove-invalid-phone-numbers: "${CONTACTS_CLEANER_REMOVE_INVALID_PHONE_NUMBERS:false}"
+    # Drop fax numbers (TEL;TYPE=FAX, work and home) — it is not 1995.
+    remove-fax-numbers: "${CONTACTS_CLEANER_REMOVE_FAX_NUMBERS:false}"
     normalize-email-addresses: "${CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES:true}"
     remove-duplicate-email-addresses: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES:true}"
     # Drop e-mail addresses that are not syntactically valid (missing @, no TLD).
