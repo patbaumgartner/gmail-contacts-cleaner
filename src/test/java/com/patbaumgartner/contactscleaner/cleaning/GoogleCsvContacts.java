@@ -59,6 +59,9 @@ final class GoogleCsvContacts {
 		if (!row.getOrDefault("Organization Name", "").isBlank()) {
 			vcard.setOrganization(row.get("Organization Name"));
 		}
+		if (!row.getOrDefault("Organization Title", "").isBlank()) {
+			vcard.addTitle(row.get("Organization Title"));
+		}
 
 		for (int i = 1; i <= 6; i++) {
 			String label = row.getOrDefault("Phone " + i + " - Label", "");

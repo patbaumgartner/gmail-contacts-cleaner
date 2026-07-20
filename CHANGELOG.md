@@ -25,6 +25,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Redundant address removal (`remove-redundant-addresses`, on by default): keeps
   the richer of two addresses when one is a subset of the other
 
+- Organization canonicalization (`canonicalize-organizations`, on by default):
+  cross-contact pass unifying company spellings to the majority variant
+- Self-organization removal: `ORG` repeating the person's own name is dropped
+- Dangling-title removal: titles without an organization (incl. orphaned by
+  organization removal) are dropped
+- Geo-coordinate address removal: coordinate-only addresses are dropped
+- Custom-field default list extended to `Age,Photo`
+- URL deduplication now ignores scheme, `www.` and trailing-slash differences
+- Label normalization extended to URL labels; orphaned `X-ABLabel`s are swept
+
 ### Fixed
 
 - E-mail domain verification: DNS NODATA (domain exists, no MX/A records) is no

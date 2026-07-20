@@ -12,6 +12,7 @@ import com.patbaumgartner.contactscleaner.cleaning.ContactCleaner;
 import com.patbaumgartner.contactscleaner.cleaning.DomainResolution;
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
 import com.patbaumgartner.contactscleaner.cleaning.EmailDomainVerifier;
+import com.patbaumgartner.contactscleaner.cleaning.OrganizationCanonicalizer;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,7 +75,8 @@ class ContactsCleanupServiceTests {
 			com.patbaumgartner.contactscleaner.cleaning.CleaningProperties properties) {
 		return new ContactsCleanupService(accounts, this.cardDavClient, new ContactCleaner(properties),
 				new DuplicateContactDetector(properties), new SharedPhoneNumberRemover(properties),
-				new EmailDomainVerifier(properties, (domain) -> DomainResolution.DELIVERABLE), this.eventPublisher);
+				new EmailDomainVerifier(properties, (domain) -> DomainResolution.DELIVERABLE),
+				new OrganizationCanonicalizer(properties), this.eventPublisher);
 	}
 
 	private static GoogleAccount account(boolean dryRun) {

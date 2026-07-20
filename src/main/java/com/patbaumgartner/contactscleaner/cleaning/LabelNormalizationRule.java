@@ -12,6 +12,7 @@ import ezvcard.parameter.EmailType;
 import ezvcard.property.Address;
 import ezvcard.property.Email;
 import ezvcard.property.RawProperty;
+import ezvcard.property.Url;
 import ezvcard.property.VCardProperty;
 
 /**
@@ -71,6 +72,31 @@ final class LabelNormalizationRule implements VCardCleaningRule {
 					address.getTypes().add(AddressType.HOME);
 				}
 				address.setGroup(null);
+				consumedLabels.add(label);
+				changed = true;
+			}
+		}
+
+		for (Url url : vcard.getUrls()) {
+			RawProperty label = labelsByGroup.get(url.getGroup());
+			if (label != null) {
+				String normalized = normalize(label.getValue());
+				if (WORK_LABELS.contains(normalized)) {
+					url.setType("work");
+				}
+				else if (HOME_LABELS.contains(normalized)) {
+					url.setType("home");
+				}
+				url.setGroup(null);
+				consumedLabels.add(label);
+				changed = true;
+			}
+		}
+
+		// Orphaned labels: their labeled property is gone (e.g. removed by the URL
+		// cleanup) — nothing left to describe.
+		for (RawProperty label : labelsByGroup.values()) {
+			if (!consumedLabels.contains(label) && !groupStillInUse(vcard, label.getGroup())) {
 				consumedLabels.add(label);
 				changed = true;
 			}

@@ -70,6 +70,39 @@ class LabelNormalizationRuleTests {
 	}
 
 	@Test
+	void normalizesUrlLabels() {
+		VCard vcard = new VCard();
+		ezvcard.property.Url url = vcard.addUrl("https://example.com/blog");
+		url.setGroup("item4");
+		vcard.addExtendedProperty("X-ABLabel", "Blog").setGroup("item4");
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getUrls().getFirst().getGroup()).isNull();
+		assertThat(vcard.getExtendedProperties()).isEmpty();
+	}
+
+	@Test
+	void mapsWorkUrlLabelsToTheWorkType() {
+		VCard vcard = new VCard();
+		ezvcard.property.Url url = vcard.addUrl("https://company.example");
+		url.setGroup("item5");
+		vcard.addExtendedProperty("X-ABLabel", "Work").setGroup("item5");
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getUrls().getFirst().getType()).isEqualTo("work");
+	}
+
+	@Test
+	void sweepsOrphanedLabelsWhoseGroupHasNoPropertyLeft() {
+		VCard vcard = new VCard();
+		// The labeled URL was removed by the URL cleanup — only the label remains.
+		vcard.addExtendedProperty("X-ABLabel", "Klout").setGroup("item6");
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getExtendedProperties()).isEmpty();
+	}
+
+	@Test
 	void leavesLabelsOfOtherPropertiesAlone() {
 		VCard vcard = new VCard();
 		ezvcard.property.Telephone telephone = new ezvcard.property.Telephone("+41446681800");
