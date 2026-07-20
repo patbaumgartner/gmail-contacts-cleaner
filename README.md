@@ -99,6 +99,8 @@ Safety first:
 | Name trimming | `" Jane  Doe "` → `"Jane Doe"` | ✅ on |
 | Empty property removal | `EMAIL:`, `ORG:;;`, all-blank `ADR` → dropped | ✅ on |
 | Duplicate **contact** detection | two cards sharing a phone/e-mail or near-identical name → **reported in the log, never merged** | ✅ on (report-only) |
+| Birthday extraction | note `Geburtstag: 12.03.1980` → proper `BDAY` field (existing birthdays never overwritten) | ✅ on |
+| Social-network note removal | `XING: xing.com/profile/…`, `Created via LinkedIn` lines stripped — user text preserved | ✅ on |
 | Note removal | deletes free-text notes | ⛔ opt-in |
 | Empty contact deletion | no phone **and** no e-mail → delete | ⛔ opt-in |
 
@@ -108,16 +110,15 @@ Safety first:
 
 ```
 gmail-contacts-cleaner/
-├── contacts-cleaner/            # Spring Boot application (Java 25 / Maven)
-│   ├── src/main/java/com/patbaumgartner/contactscleaner/
-│   │   ├── account/             # Module: multi-account configuration
-│   │   ├── carddav/             # Module: Google CardDAV client (RFC 6352)
-│   │   ├── cleaning/            # Module: pure vCard cleaning rules
-│   │   ├── orchestration/       # Module: workflow, scheduler, one-shot runner
-│   │   ├── reporting/           # Module: run summaries via domain events
-│   │   └── config/              # Shared: HTTP client, scheduling, native hints
-│   ├── src/test/java/           # Unit + integration + architecture tests
-│   └── pom.xml
+├── src/main/java/com/patbaumgartner/contactscleaner/
+│   ├── account/                 # Module: multi-account configuration
+│   ├── carddav/                 # Module: Google CardDAV client (RFC 6352)
+│   ├── cleaning/                # Module: pure vCard cleaning rules
+│   ├── orchestration/           # Module: workflow, scheduler, one-shot runner
+│   ├── reporting/               # Module: run summaries via domain events
+│   └── config/                  # Shared: HTTP client, scheduling, native hints
+├── src/test/java/               # Unit + integration + architecture tests
+├── pom.xml
 ├── docker-compose.yml           # Production — pulls the image from Docker Hub
 ├── .env.example                 # Configuration template — copy to .env
 └── .github/workflows/           # CI, release, dependency review, auto-merge
@@ -189,9 +190,7 @@ Keep the default one-shot mode and let the host trigger it:
 ## Local development
 
 ```sh
-cd contacts-cleaner
-
-# Run the application (../.env is loaded automatically via spring.config.import)
+# Run the application (.env is loaded automatically via spring.config.import)
 ./mvnw spring-boot:run
 
 # Unit tests only
@@ -244,6 +243,8 @@ using property syntax — see the bottom of `.env.example`.
 | `CONTACTS_CLEANER_TRIM_NAMES` | `true` | Trim name whitespace |
 | `CONTACTS_CLEANER_REMOVE_EMPTY_PROPERTIES` | `true` | Drop blank `TEL`/`EMAIL`/`URL`/`NOTE`, all-blank `ORG`/`ADR` |
 | `CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS` | `true` | Report-only: log likely duplicate contact pairs |
+| `CONTACTS_CLEANER_EXTRACT_BIRTHDAYS` | `true` | Promote keyword-tagged note birthdays to `BDAY` |
+| `CONTACTS_CLEANER_REMOVE_SOCIAL_NETWORK_NOTES` | `true` | Strip XING/LinkedIn sync lines from notes |
 | `CONTACTS_CLEANER_REMOVE_NOTES` | `false` | ⚠️ Destructive — delete notes |
 | `CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS` | `false` | ⚠️ Destructive — delete empty contacts |
 
@@ -264,7 +265,7 @@ The application is a [Spring Modulith](https://spring.io/projects/spring-modulit
 module boundaries are verified by tests (`ModularityTests`), coding conventions are
 enforced with [Taikai](https://github.com/enofex/taikai)/ArchUnit
 (`ArchitectureTests`), and module documentation (PlantUML diagrams + canvases) is
-generated on every build under `contacts-cleaner/target/spring-modulith-docs`.
+generated on every build under `target/spring-modulith-docs`.
 
 ```
 orchestration ──► account

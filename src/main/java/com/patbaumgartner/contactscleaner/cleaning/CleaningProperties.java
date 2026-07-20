@@ -28,6 +28,12 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param detectDuplicateContacts report-only detection of contacts that appear to be
  * duplicates of each other (shared phone/e-mail or near-identical name); nothing is
  * merged or deleted, candidates are logged in the run summary
+ * @param extractBirthdays promote a keyword-tagged birthday found in the notes (e.g.
+ * {@code "Geburtstag: 12.03.1980"}) to a proper {@code BDAY} property; never overwrites
+ * an existing birthday, never modifies the note
+ * @param removeSocialNetworkNotes strip machine-generated XING/LinkedIn sync lines
+ * (profile URLs, {@code "Created via LinkedIn"}) from notes; user-written text in the
+ * same note is preserved
  * @param removeNotes delete the free-text notes field of every contact
  * (<strong>destructive</strong>, off by default)
  * @param deleteEmptyContacts delete contacts that have neither a phone number nor an
@@ -39,6 +45,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		@DefaultValue("true") boolean normalizeEmailAddresses,
 		@DefaultValue("true") boolean removeDuplicateEmailAddresses, @DefaultValue("true") boolean trimNames,
 		@DefaultValue("true") boolean removeEmptyProperties, @DefaultValue("true") boolean detectDuplicateContacts,
+		@DefaultValue("true") boolean extractBirthdays, @DefaultValue("true") boolean removeSocialNetworkNotes,
 		@DefaultValue("false") boolean removeNotes, @DefaultValue("false") boolean deleteEmptyContacts) {
 
 	/**
@@ -47,7 +54,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 * @return default cleaning properties
 	 */
 	public static CleaningProperties defaults() {
-		return new CleaningProperties(true, "", true, true, true, true, true, true, false, false);
+		return new CleaningProperties(true, "", true, true, true, true, true, true, true, true, false, false);
 	}
 
 	/**
@@ -58,7 +65,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	public CleaningProperties withPhoneRegion(String phoneRegion) {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
 				normalizeEmailAddresses, removeDuplicateEmailAddresses, trimNames, removeEmptyProperties,
-				detectDuplicateContacts, removeNotes, deleteEmptyContacts);
+				detectDuplicateContacts, extractBirthdays, removeSocialNetworkNotes, removeNotes, deleteEmptyContacts);
 	}
 
 	/**
@@ -70,6 +77,6 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	public CleaningProperties withDestructiveOptions(boolean removeNotes, boolean deleteEmptyContacts) {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
 				normalizeEmailAddresses, removeDuplicateEmailAddresses, trimNames, removeEmptyProperties,
-				detectDuplicateContacts, removeNotes, deleteEmptyContacts);
+				detectDuplicateContacts, extractBirthdays, removeSocialNetworkNotes, removeNotes, deleteEmptyContacts);
 	}
 }

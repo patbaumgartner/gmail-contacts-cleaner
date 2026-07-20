@@ -51,6 +51,14 @@ public class ContactCleaner {
 		if (properties.removeDuplicateEmailAddresses()) {
 			rules.add(new DuplicateEmailRemovalRule());
 		}
+		// Birthday extraction must run before any note removal so a birthday hiding
+		// in a note is promoted to BDAY before the note disappears.
+		if (properties.extractBirthdays()) {
+			rules.add(new BirthdayExtractionRule());
+		}
+		if (properties.removeSocialNetworkNotes()) {
+			rules.add(new SocialNetworkNoteRemovalRule());
+		}
 		if (properties.removeNotes()) {
 			rules.add(new NoteRemovalRule());
 		}

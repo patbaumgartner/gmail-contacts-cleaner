@@ -57,7 +57,6 @@ cp .env.example .env
 ### 3. Build and test
 
 ```sh
-cd contacts-cleaner
 ./mvnw verify
 ```
 
@@ -70,7 +69,6 @@ cd contacts-cleaner
 git checkout -b feature/my-feature   # or fix/my-fix, docs/my-docs
 
 # Make your changes, then:
-cd contacts-cleaner
 ./mvnw spring-javaformat:apply   # auto-format before committing
 ./mvnw verify                    # format check + tests + architecture rules + SpotBugs + JaCoCo
 
