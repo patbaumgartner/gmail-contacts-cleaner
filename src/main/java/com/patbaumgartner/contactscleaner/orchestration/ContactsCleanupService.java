@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -14,6 +15,7 @@ import com.patbaumgartner.contactscleaner.carddav.CardDavClient;
 import com.patbaumgartner.contactscleaner.cleaning.ContactCleaner;
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateCandidate;
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
+import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactMerger;
 import com.patbaumgartner.contactscleaner.cleaning.EmailDomainVerifier;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
 import ezvcard.Ezvcard;
@@ -54,6 +56,8 @@ public class ContactsCleanupService {
 
 	private final DuplicateContactDetector duplicateContactDetector;
 
+	private final DuplicateContactMerger duplicateContactMerger;
+
 	private final SharedPhoneNumberRemover sharedPhoneNumberRemover;
 
 	private final EmailDomainVerifier emailDomainVerifier;
@@ -65,12 +69,13 @@ public class ContactsCleanupService {
 
 	ContactsCleanupService(AccountsProperties accountsProperties, CardDavClient cardDavClient,
 			ContactCleaner contactCleaner, DuplicateContactDetector duplicateContactDetector,
-			SharedPhoneNumberRemover sharedPhoneNumberRemover, EmailDomainVerifier emailDomainVerifier,
-			ApplicationEventPublisher eventPublisher) {
+			DuplicateContactMerger duplicateContactMerger, SharedPhoneNumberRemover sharedPhoneNumberRemover,
+			EmailDomainVerifier emailDomainVerifier, ApplicationEventPublisher eventPublisher) {
 		this.accountsProperties = accountsProperties;
 		this.cardDavClient = cardDavClient;
 		this.contactCleaner = contactCleaner;
 		this.duplicateContactDetector = duplicateContactDetector;
+		this.duplicateContactMerger = duplicateContactMerger;
 		this.sharedPhoneNumberRemover = sharedPhoneNumberRemover;
 		this.emailDomainVerifier = emailDomainVerifier;
 		this.eventPublisher = eventPublisher;
@@ -110,15 +115,18 @@ public class ContactsCleanupService {
 		try {
 			List<AddressBookEntry> entries = cardDavClient.fetchAllContacts(account);
 
-			// Pass 1: parse and clean every contact individually.
+			// Pass 1: parse and clean every contact individually. Snapshots taken
+			// before cleaning feed the before/after diff in the HTML report.
 			List<AddressBookEntry> parsedEntries = new ArrayList<>();
 			List<VCard> vcards = new ArrayList<>();
+			Map<VCard, List<String>> snapshots = new IdentityHashMap<>();
 			Set<VCard> changedContacts = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
 			for (AddressBookEntry entry : entries) {
 				VCard vcard = parse(entry);
 				if (vcard == null) {
 					continue;
 				}
+				snapshots.put(vcard, VCardSnapshot.of(vcard));
 				if (contactCleaner.clean(vcard).changed()) {
 					changedContacts.add(vcard);
 				}
@@ -127,8 +135,24 @@ public class ContactsCleanupService {
 			}
 
 			// Pass 2: cross-contact cleanup — needs the whole address book at once.
-			changedContacts.addAll(sharedPhoneNumberRemover.removeSharedNumbers(vcards));
-			changedContacts.addAll(emailDomainVerifier.removeUndeliverableAddresses(vcards));
+			// Merging runs first so that a duplicated person's direct number is not
+			// mistaken for a shared office line afterwards.
+			List<ContactChange> changes = new ArrayList<>();
+			Set<VCard> mergedAway = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+			for (DuplicateContactMerger.Merge merge : duplicateContactMerger.merge(vcards)) {
+				changedContacts.add(merge.primary());
+				for (VCard duplicate : merge.merged()) {
+					mergedAway.add(duplicate);
+					changes.add(new ContactChange(VCardSnapshot.displayName(duplicate), ContactChange.Type.MERGED,
+							snapshots.get(duplicate),
+							List.of("merged into '" + VCardSnapshot.displayName(merge.primary()) + "'")));
+				}
+			}
+			// Merged-away cards are excluded, otherwise the primary's direct number
+			// would look like it is shared with its own (deleted) duplicate.
+			List<VCard> activeContacts = vcards.stream().filter((vcard) -> !mergedAway.contains(vcard)).toList();
+			changedContacts.addAll(sharedPhoneNumberRemover.removeSharedNumbers(activeContacts));
+			changedContacts.addAll(emailDomainVerifier.removeUndeliverableAddresses(activeContacts));
 
 			// Pass 3: write back. Emptiness is evaluated last so that a contact whose
 			// only phone number was a shared office line is deleted (when enabled).
@@ -138,12 +162,18 @@ public class ContactsCleanupService {
 			for (int i = 0; i < vcards.size(); i++) {
 				VCard vcard = vcards.get(i);
 				AddressBookEntry entry = parsedEntries.get(i);
-				if (contactCleaner.isDeletableEmptyContact(vcard)) {
+				if (mergedAway.contains(vcard)) {
 					deleted += deleteContact(account, entry, vcard) ? 1 : 0;
+				}
+				else if (contactCleaner.isDeletableEmptyContact(vcard)) {
+					deleted += deleteContact(account, entry, vcard) ? 1 : 0;
+					changes.add(new ContactChange(VCardSnapshot.displayName(vcard), ContactChange.Type.DELETED,
+							snapshots.get(vcard), List.of()));
 				}
 				else {
 					if (changedContacts.contains(vcard)) {
 						updated += updateContact(account, entry, vcard) ? 1 : 0;
+						changes.add(diff(vcard, snapshots.get(vcard)));
 					}
 					survivingContacts.add(vcard);
 				}
@@ -156,7 +186,7 @@ public class ContactsCleanupService {
 							+ "{} duplicate candidates in {}ms{}",
 					account.name(), entries.size(), updated, deleted, duplicates.size(), duration,
 					account.dryRun() ? " (dry run — nothing written)" : "");
-			return new AccountCleanupResult(account.name(), true, entries.size(), updated, deleted, duplicates,
+			return new AccountCleanupResult(account.name(), true, entries.size(), updated, deleted, duplicates, changes,
 					account.dryRun(), duration, "Cleanup completed");
 		}
 		catch (RuntimeException ex) {
@@ -164,6 +194,14 @@ public class ContactsCleanupService {
 			log.error("Cleanup failed for account '{}' after {}ms", account.name(), duration, ex);
 			return AccountCleanupResult.failure(account.name(), duration, ex.getMessage());
 		}
+	}
+
+	/** Computes the before/after property diff of a changed contact. */
+	private ContactChange diff(VCard vcard, List<String> before) {
+		List<String> after = VCardSnapshot.of(vcard);
+		List<String> removed = before.stream().filter((line) -> !after.contains(line)).toList();
+		List<String> added = after.stream().filter((line) -> !before.contains(line)).toList();
+		return new ContactChange(VCardSnapshot.displayName(vcard), ContactChange.Type.UPDATED, removed, added);
 	}
 
 	/**

@@ -91,7 +91,7 @@ class DuplicateContactDetectorTests {
 	@Test
 	void returnsEmptyWhenDetectionIsDisabled() {
 		var disabled = new DuplicateContactDetector(new CleaningProperties(true, "", true, true, true, true, true,
-				false, true, false, true, true, true, false, 3, false, false));
+				false, true, false, false, true, true, true, false, 3, false, false));
 
 		assertThat(disabled
 			.detect(List.of(contact("Jane Doe", "+41446681800", null), contact("Jane Doe", "+41446681800", null))))

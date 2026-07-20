@@ -98,7 +98,8 @@ Safety first:
 | Duplicate e-mail removal | keeps the first occurrence | ✅ on |
 | Name trimming | `" Jane  Doe "` → `"Jane Doe"` | ✅ on |
 | Empty property removal | `EMAIL:`, `ORG:;;`, all-blank `ADR` → dropped | ✅ on |
-| Duplicate **contact** detection | two cards sharing a phone/e-mail or near-identical name → **reported in the log, never merged** | ✅ on (report-only) |
+| Duplicate **contact** detection | two cards sharing a phone/e-mail or near-identical name → **reported, not touched** | ✅ on (report-only) |
+| Duplicate **contact** merging | provable duplicates (same name tokens + shared phone/e-mail, e.g. `Max Muster` = `Muster Max`) → union-merged into one card | ⛔ opt-in |
 | Birthday extraction | note `Geburtstag: 12.03.1980` → proper `BDAY` field (existing birthdays never overwritten) | ✅ on |
 | Social-network note removal | `XING: xing.com/profile/…`, `Created via LinkedIn`, LinkedIn `Position:/Connected on` blocks stripped — user text preserved | ✅ on |
 | Dead-service URL removal | Klout, Gravatar, Google+, Picasa, FriendFeed links dropped; URLs trimmed + deduplicated | ✅ on |
@@ -247,6 +248,7 @@ using property syntax — see the bottom of `.env.example`.
 | `CONTACTS_CLEANER_TRIM_NAMES` | `true` | Trim name whitespace |
 | `CONTACTS_CLEANER_REMOVE_EMPTY_PROPERTIES` | `true` | Drop blank `TEL`/`EMAIL`/`URL`/`NOTE`, all-blank `ORG`/`ADR` |
 | `CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS` | `true` | Report-only: log likely duplicate contact pairs |
+| `CONTACTS_CLEANER_MERGE_DUPLICATE_CONTACTS` | `false` | ⚠️ Destructive — auto-merge provable duplicates |
 | `CONTACTS_CLEANER_EXTRACT_BIRTHDAYS` | `true` | Promote keyword-tagged note birthdays to `BDAY` |
 | `CONTACTS_CLEANER_REMOVE_SOCIAL_NETWORK_NOTES` | `true` | Strip XING/LinkedIn sync lines from notes |
 | `CONTACTS_CLEANER_REMOVE_INVALID_EMAILS` | `true` | Drop syntactically broken e-mail addresses |
@@ -264,6 +266,16 @@ using property syntax — see the bottom of `.env.example`.
 | `CONTACTS_CLEANER_SCHEDULER_CRON` | `0 0 3 * * *` | Nightly at 03:00 |
 | `CONTACTS_CLEANER_SCHEDULER_ZONE` | `Europe/Zurich` | Timezone for the cron |
 | `CONTACTS_CLEANER_STARTUP_RUN_ENABLED` | `true` (`false` in server) | One-shot run at boot |
+
+---
+
+## HTML report
+
+After every run a **self-contained single-page HTML report** is written to
+`reports/cleanup-report-latest.html` (plus a timestamped copy): summary cards per
+account, red/green before/after diff per contact, merge and deletion badges, the
+duplicate-candidate list, and a live filter box. Run with `dry-run: true`, open the
+report, review every change visually — then go live.
 
 ---
 

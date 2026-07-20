@@ -1,4 +1,6 @@
 contacts-cleaner:
+  report:
+    directory: target/test-reports
   startup-run:
     enabled: false
   scheduler:

@@ -10,6 +10,11 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import com.patbaumgartner.contactscleaner.orchestration.AccountCleanupResult;
+import com.patbaumgartner.contactscleaner.orchestration.CleanupRunCompleted;
+import com.patbaumgartner.contactscleaner.orchestration.ContactChange;
+import com.patbaumgartner.contactscleaner.reporting.HtmlReportWriter;
+import com.patbaumgartner.contactscleaner.reporting.ReportProperties;
 import ezvcard.VCard;
 import org.junit.jupiter.api.Test;
 
@@ -50,8 +55,10 @@ class GoogleCsvExportAnalysisIT {
 		perRuleHitCounts(contacts, properties);
 		List<String> diffs = fullCleanWithDiffs(contacts, properties);
 		duplicateReport(contacts, properties);
+		mergeReport(contacts);
 		sharedNumberReport(contacts);
 		residualDirtScan(contacts);
+		writeHtmlReport(properties);
 
 		assertThat(contacts).isNotEmpty();
 		assertThat(diffs).isNotEmpty();
@@ -116,10 +123,53 @@ class GoogleCsvExportAnalysisIT {
 					candidate.secondContact(), candidate.reason()));
 	}
 
+	/**
+	 * Renders the production HTML report from the export as a simulated dry run — open
+	 * reports/cleanup-report-latest.html in a browser for the visual check.
+	 */
+	private void writeHtmlReport(CleaningProperties properties) throws Exception {
+		List<VCard> contacts = GoogleCsvContacts.read(EXPORT);
+		ContactCleaner cleaner = new ContactCleaner(properties);
+		List<ContactChange> changes = new ArrayList<>();
+		int updated = 0;
+		java.util.Map<VCard, List<String>> snapshots = new java.util.IdentityHashMap<>();
+		for (VCard vcard : contacts) {
+			snapshots.put(vcard, snapshot(vcard));
+			if (cleaner.clean(vcard).changed()) {
+				updated++;
+				List<String> before = snapshots.get(vcard);
+				List<String> after = snapshot(vcard);
+				changes.add(new ContactChange(displayName(vcard), ContactChange.Type.UPDATED,
+						before.stream().filter((line) -> !after.contains(line)).toList(),
+						after.stream().filter((line) -> !before.contains(line)).toList()));
+			}
+		}
+		var merger = new DuplicateContactMerger(properties.withMergeDuplicateContacts());
+		for (DuplicateContactMerger.Merge merge : merger.merge(contacts)) {
+			for (VCard duplicate : merge.merged()) {
+				changes.add(new ContactChange(displayName(duplicate), ContactChange.Type.MERGED,
+						snapshots.get(duplicate), List.of("merged into '" + displayName(merge.primary()) + "'")));
+			}
+		}
+		var duplicates = new DuplicateContactDetector(properties).detect(contacts);
+		var result = new AccountCleanupResult("export-analysis (simulated)", true, contacts.size(), updated, 0,
+				duplicates, changes, true, 0, "Simulated from " + EXPORT);
+		new HtmlReportWriter(new ReportProperties(true, "reports"))
+			.onCleanupRunCompleted(new CleanupRunCompleted(java.time.Instant.now(), List.of(result)));
+		section("HTML REPORT written to reports/cleanup-report-latest.html — open it in a browser");
+	}
+
+	/** What would the opt-in duplicate merge do? */
+	private void mergeReport(List<VCard> contacts) {
+		var merges = new DuplicateContactMerger(CleaningProperties.defaults().withMergeDuplicateContacts())
+			.merge(contacts);
+		section("AUTO-MERGES (opt-in merge-duplicate-contacts): %d merge groups".formatted(merges.size()));
+	}
+
 	/** What would the opt-in shared-office-number removal do? */
 	private void sharedNumberReport(List<VCard> contacts) {
 		CleaningProperties enabled = new CleaningProperties(true, "CH", true, true, true, true, false, true, true, true,
-				true, true, true, true, 2, false, false);
+				false, true, true, true, true, 2, false, false);
 		var changed = new SharedPhoneNumberRemover(enabled).removeSharedNumbers(contacts);
 		section("SHARED PHONE NUMBERS (opt-in remove-shared-phone-numbers, default threshold 2): %d contacts affected"
 			.formatted(changed.size()));

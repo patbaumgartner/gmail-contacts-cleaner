@@ -25,7 +25,15 @@
        string, so Unicode case-mapping quirks are harmless. -->
   <Match>
     <Bug pattern="IMPROPER_UNICODE" />
-    <Class name="com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector" />
+    <Class name="~com\.patbaumgartner\.contactscleaner\.cleaning\.(DuplicateContactDetector|DuplicateContactMerger)" />
+  </Match>
+
+  <!-- DuplicateContactMerger.Merge deliberately exposes the primary VCard: callers
+       (orchestration) must mutate and persist exactly that shared card instance —
+       a defensive copy would defeat the purpose. -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
+    <Class name="com.patbaumgartner.contactscleaner.cleaning.DuplicateContactMerger$Merge" />
   </Match>
 
   <!-- FindSecBugs' ReDoS detector does not model possessive quantifiers (++): the
@@ -35,6 +43,15 @@
   <Match>
     <Bug pattern="REDOS" />
     <Class name="com.patbaumgartner.contactscleaner.cleaning.InvalidEmailRemovalRule" />
+  </Match>
+
+  <!-- HtmlReportWriter escapes every dynamic value via its escape() method before
+       appending; FindSecBugs cannot trace the sanitizer through method calls and
+       flags each append as potential XML injection. The report is also a local file
+       rendered from the user's own contact data, not a served web page. -->
+  <Match>
+    <Bug pattern="POTENTIAL_XML_INJECTION" />
+    <Class name="com.patbaumgartner.contactscleaner.reporting.HtmlReportWriter" />
   </Match>
 
 </FindBugsFilter>
