@@ -99,7 +99,7 @@ Safety first:
 | Duplicate e-mail removal | keeps the first occurrence | ✅ on |
 | Name trimming | `" Jane  Doe "` → `"Jane Doe"` | ✅ on |
 | Junk name-suffix removal | `(JIRA)`, `(whatsapp)` import fragments dropped; `Jr.`/`PMP` kept | ✅ on |
-| Name repair | `JANE DOE` → `Jane Doe` (`McDonald`/`van der` aware), `Dr` → `Dr.`, e-mail in name field → moved to e-mails | ✅ on |
+| Name repair | `JANE DOE` → `Jane Doe` (`McDonald`/`van der` aware), `Knecht, Patrick` → `Patrick Knecht`, `Dr` → `Dr.`, e-mail in name field → moved to e-mails | ✅ on |
 | Label normalization | custom e-mail/phone/address labels → standard types: `Geschäftlich` → `WORK`, `Mobil` → `CELL`, `Internet email`/`WhatsApp`/`Obsolete` → default | ✅ on |
 | Empty property removal | `EMAIL:`, `ORG:;;`, all-blank `ADR` → dropped | ✅ on |
 | Duplicate **contact** detection | two cards sharing a phone/e-mail, near-identical or word-flipped names → **reported, not touched** (merge them with Google's own "Merge & fix") | ✅ on (report-only) |

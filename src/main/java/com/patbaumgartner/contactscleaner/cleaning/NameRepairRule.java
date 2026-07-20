@@ -22,6 +22,9 @@ import ezvcard.property.StructuredName;
  * hyphenated names capitalize both parts. Mixed-case names are never touched.</li>
  * <li><strong>Prefix canonicalization</strong> — {@code Dr} → {@code Dr.}, {@code Prof} →
  * {@code Prof.} (known honorifics only).</li>
+ * <li><strong>"Last, First" display names</strong> — {@code "Knecht, Patrick"} becomes
+ * {@code "Patrick Knecht"}; the comma convention is unambiguous, and empty given/family
+ * fields are populated from the parts.</li>
  * <li><strong>E-mail addresses stuck in name fields</strong> — the address is moved to
  * the contact's e-mails (if not already there) and removed from the name; a contact left
  * nameless gets a readable name derived from the local part ({@code jane.doe@…} →
@@ -42,9 +45,64 @@ final class NameRepairRule implements VCardCleaningRule {
 	public boolean apply(VCard vcard) {
 		boolean changed = false;
 		changed |= rescueEmailsFromNameFields(vcard);
+		changed |= repairCommaFormattedDisplayName(vcard);
 		changed |= repairAllCapsComponents(vcard);
 		changed |= canonicalizePrefixes(vcard);
 		return changed;
+	}
+
+	// ── "Last, First" display names ───────────────────────────────────────────
+
+	/**
+	 * {@code "Knecht, Patrick"} → {@code "Patrick Knecht"}. Applies only to the
+	 * unambiguous single-comma form with two non-empty parts; anything fancier (multiple
+	 * commas, suffix notation) is left alone.
+	 */
+	private boolean repairCommaFormattedDisplayName(VCard vcard) {
+		FormattedName formatted = vcard.getFormattedName();
+		if (formatted == null || formatted.getValue() == null) {
+			return false;
+		}
+		String value = formatted.getValue().trim();
+		int comma = value.indexOf(',');
+		if (comma <= 0 || value.indexOf(',', comma + 1) >= 0 || value.contains("@")) {
+			return false;
+		}
+		String family = value.substring(0, comma).trim();
+		String given = value.substring(comma + 1).trim();
+		if (family.isEmpty() || given.isEmpty() || looksLikeOrganization(given) || looksLikeOrganization(family)) {
+			return false;
+		}
+		// If a structured name exists and contradicts the comma reading
+		// ("family, given"), trust the structured name and do nothing.
+		StructuredName name = vcard.getStructuredName();
+		if (name != null && !isBlank(name.getGiven()) && !isBlank(name.getFamily())
+				&& !(equalsIgnoreCaseTrimmed(name.getFamily(), family)
+						&& equalsIgnoreCaseTrimmed(name.getGiven(), given))) {
+			return false;
+		}
+		formatted.setValue(given + " " + family);
+		if (name == null) {
+			name = new StructuredName();
+			vcard.setStructuredName(name);
+		}
+		if (isBlank(name.getGiven())) {
+			name.setGiven(given);
+		}
+		if (isBlank(name.getFamily())) {
+			name.setFamily(family);
+		}
+		return true;
+	}
+
+	/** "Müller & Partner AG" is a company fragment, not a first name. */
+	private boolean looksLikeOrganization(String part) {
+		return part.contains("&") || part
+			.matches("(?i).*\\b(ag|gmbh|inc|ltd|llc|sa|kg|co|plc|sarl|sagl|partner|partners|associates)\\b\\.?.*");
+	}
+
+	private boolean equalsIgnoreCaseTrimmed(String first, String second) {
+		return first != null && second != null && first.trim().equalsIgnoreCase(second.trim());
 	}
 
 	// ── E-mail in name ────────────────────────────────────────────────────────

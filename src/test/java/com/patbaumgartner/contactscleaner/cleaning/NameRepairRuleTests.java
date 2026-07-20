@@ -72,6 +72,51 @@ class NameRepairRuleTests {
 		assertThat(this.rule.apply(unknown)).isFalse();
 	}
 
+	// ── "Last, First" display names ───────────────────────────────────────────
+
+	@Test
+	void flipsCommaFormattedDisplayNames() {
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new FormattedName("Knecht, Patrick"));
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Patrick Knecht");
+		// Empty structured name is populated from the parts.
+		assertThat(vcard.getStructuredName().getGiven()).isEqualTo("Patrick");
+		assertThat(vcard.getStructuredName().getFamily()).isEqualTo("Knecht");
+	}
+
+	@Test
+	void commaFormAgreeingWithTheStructuredNameIsRepaired() {
+		VCard vcard = named("Patrick", "Knecht");
+		vcard.setFormattedName(new FormattedName("Knecht, Patrick"));
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Patrick Knecht");
+	}
+
+	@Test
+	void structuredNameContradictionPreventsTheFlip() {
+		// N says given=Knecht family=Patrick — ambiguous, do not touch.
+		VCard vcard = named("Knecht", "Patrick");
+		vcard.setFormattedName(new FormattedName("Knecht, Patrick"));
+
+		assertThat(this.rule.apply(vcard)).isFalse();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Knecht, Patrick");
+	}
+
+	@Test
+	void multipleCommasAndCompanyStyleNamesAreLeftAlone() {
+		VCard multi = new VCard();
+		multi.setFormattedName(new FormattedName("Doe, Jane, PhD"));
+		assertThat(this.rule.apply(multi)).isFalse();
+
+		VCard company = new VCard();
+		company.setFormattedName(new FormattedName("Meier, Müller & Partner AG"));
+		assertThat(this.rule.apply(company)).isFalse();
+		assertThat(company.getFormattedName().getValue()).isEqualTo("Meier, Müller & Partner AG");
+	}
+
 	// ── E-mail in name ────────────────────────────────────────────────────────
 
 	@Test
