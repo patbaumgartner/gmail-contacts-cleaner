@@ -1,6 +1,7 @@
 package com.patbaumgartner.contactscleaner.carddav;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.patbaumgartner.contactscleaner.account.GoogleAccount;
@@ -30,20 +31,26 @@ class GoogleCardDavClient implements CardDavClient {
 
 	private static final HttpMethod REPORT = HttpMethod.valueOf("REPORT");
 
+	private static final HttpMethod PROPFIND = HttpMethod.valueOf("PROPFIND");
+
+	/** Number of vCards requested per addressbook-multiget REPORT. */
+	private static final int MULTIGET_BATCH_SIZE = 100;
+
 	private static final MediaType TEXT_VCARD = MediaType.parseMediaType("text/vcard; charset=utf-8");
 
 	/**
-	 * RFC 6352 addressbook-query asking for the etag and the full address data of every
-	 * vCard in the collection.
+	 * PROPFIND body listing every resource of the collection with its etag. Google does
+	 * not reliably support {@code addressbook-query} with inline address data, so
+	 * contacts are listed first and fetched via {@code addressbook-multiget} — the same
+	 * two-step flow iOS/macOS use.
 	 */
-	private static final String ADDRESSBOOK_QUERY = """
+	private static final String PROPFIND_ETAGS = """
 			<?xml version="1.0" encoding="UTF-8"?>
-			<card:addressbook-query xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">
+			<d:propfind xmlns:d="DAV:">
 			  <d:prop>
 			    <d:getetag/>
-			    <card:address-data/>
 			  </d:prop>
-			</card:addressbook-query>
+			</d:propfind>
 			""";
 
 	private final RestClient restClient;
@@ -62,17 +69,15 @@ class GoogleCardDavClient implements CardDavClient {
 	@Override
 	public List<AddressBookEntry> fetchAllContacts(GoogleAccount account) {
 		String path = properties.addressBookPath(account.email());
-		log.debug("Fetching address book for account '{}' from {}", account.name(), path);
+		log.debug("Listing address book for account '{}' at {}", account.name(), path);
 		try {
-			String multistatus = restClient.method(REPORT)
-				.uri(path)
-				.headers((headers) -> authenticate(headers, account))
-				.header("Depth", "1")
-				.contentType(MediaType.APPLICATION_XML)
-				.body(ADDRESSBOOK_QUERY)
-				.retrieve()
-				.body(String.class);
-			List<AddressBookEntry> entries = multistatusParser.parse((multistatus != null) ? multistatus : "");
+			List<AddressBookEntry> refs = listResources(account, path);
+			log.info("Address book of account '{}' lists {} contacts", account.name(), refs.size());
+			List<AddressBookEntry> entries = new ArrayList<>(refs.size());
+			for (int from = 0; from < refs.size(); from += MULTIGET_BATCH_SIZE) {
+				List<AddressBookEntry> batch = refs.subList(from, Math.min(from + MULTIGET_BATCH_SIZE, refs.size()));
+				entries.addAll(multiget(account, path, batch));
+			}
 			log.info("Fetched {} contacts for account '{}'", entries.size(), account.name());
 			return entries;
 		}
@@ -80,6 +85,49 @@ class GoogleCardDavClient implements CardDavClient {
 			throw new CardDavException("Failed to fetch contacts for account '%s' — check e-mail and app password"
 				.formatted(account.name()), ex);
 		}
+	}
+
+	/** Lists all vCard resources (href + etag) of the collection via PROPFIND Depth:1. */
+	private List<AddressBookEntry> listResources(GoogleAccount account, String path) {
+		String multistatus = restClient.method(PROPFIND)
+			.uri(path)
+			.headers((headers) -> authenticate(headers, account))
+			.header("Depth", "1")
+			.contentType(MediaType.APPLICATION_XML)
+			.body(PROPFIND_ETAGS)
+			.retrieve()
+			.body(String.class);
+		return multistatusParser.parseResourceRefs((multistatus != null) ? multistatus : "");
+	}
+
+	/** Fetches the vCard payloads of the given resources via addressbook-multiget. */
+	private List<AddressBookEntry> multiget(GoogleAccount account, String path, List<AddressBookEntry> refs) {
+		StringBuilder body = new StringBuilder("""
+				<?xml version="1.0" encoding="UTF-8"?>
+				<card:addressbook-multiget xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">
+				  <d:prop>
+				    <d:getetag/>
+				    <card:address-data/>
+				  </d:prop>
+				""");
+		for (AddressBookEntry ref : refs) {
+			body.append("  <d:href>").append(escapeXml(ref.href())).append("</d:href>\n");
+		}
+		body.append("</card:addressbook-multiget>\n");
+
+		String multistatus = restClient.method(REPORT)
+			.uri(path)
+			.headers((headers) -> authenticate(headers, account))
+			.header("Depth", "1")
+			.contentType(MediaType.APPLICATION_XML)
+			.body(body.toString())
+			.retrieve()
+			.body(String.class);
+		return multistatusParser.parse((multistatus != null) ? multistatus : "");
+	}
+
+	private String escapeXml(String value) {
+		return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
 	}
 
 	@Override

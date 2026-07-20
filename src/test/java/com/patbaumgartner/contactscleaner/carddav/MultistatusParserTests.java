@@ -50,6 +50,33 @@ class MultistatusParserTests {
 	}
 
 	@Test
+	void parsesResourceRefsSkippingTheCollectionItself() {
+		String propfind = """
+				<?xml version="1.0" encoding="UTF-8"?>
+				<d:multistatus xmlns:d="DAV:">
+				  <d:response>
+				    <d:href>/carddav/v1/principals/jane.doe%40gmail.com/lists/default/</d:href>
+				    <d:propstat><d:status>HTTP/1.1 200 OK</d:status><d:prop/></d:propstat>
+				  </d:response>
+				  <d:response>
+				    <d:href>/carddav/v1/principals/jane.doe%40gmail.com/lists/default/abc123</d:href>
+				    <d:propstat>
+				      <d:status>HTTP/1.1 200 OK</d:status>
+				      <d:prop><d:getetag>"etag-1"</d:getetag></d:prop>
+				    </d:propstat>
+				  </d:response>
+				</d:multistatus>
+				""";
+
+		List<AddressBookEntry> refs = parser.parseResourceRefs(propfind);
+
+		assertThat(refs).hasSize(1);
+		assertThat(refs.getFirst().href()).endsWith("/abc123");
+		assertThat(refs.getFirst().etag()).isEqualTo("\"etag-1\"");
+		assertThat(refs.getFirst().vcard()).isNull();
+	}
+
+	@Test
 	void returnsEmptyListForEmptyMultistatus() {
 		assertThat(parser.parse("""
 				<?xml version="1.0" encoding="UTF-8"?>

@@ -151,7 +151,7 @@ cd gmail-contacts-cleaner
 
 # 2. Create and fill in your configuration
 cp .env.example .env
-$EDITOR .env   # set ACCOUNT_0_EMAIL and ACCOUNT_0_APP_PASSWORD (keep DRY_RUN=true!)
+$EDITOR .env   # set accounts[0].email and accounts[0].app-password (keep dry-run=true!)
 
 # 3. Pull the pre-built native image and run
 docker compose pull
@@ -159,7 +159,7 @@ docker compose up
 ```
 
 The app cleans all enabled accounts once and exits. Review the dry-run log output,
-then set `ACCOUNT_0_DRY_RUN=false` and run again.
+then set `contacts-cleaner.accounts[0].dry-run=false` and run again.
 
 **Pinning a specific release:**
 
@@ -226,15 +226,14 @@ Copy `.env.example` to `.env` and fill in the required values.
 
 | Variable | Description |
 |---|---|
-| `ACCOUNT_0_NAME` | Label used in logs (e.g. `personal`) |
-| `ACCOUNT_0_EMAIL` | Google account e-mail |
-| `ACCOUNT_0_APP_PASSWORD` | App password — never your real password |
-| `ACCOUNT_0_ENABLED` | Participate in runs (default `true`) |
-| `ACCOUNT_0_DRY_RUN` | Compute + log changes only (default `false`, **start with `true`**) |
+| `contacts-cleaner.accounts[0].name` | Label used in logs (e.g. `personal`) |
+| `contacts-cleaner.accounts[0].email` | Google account e-mail |
+| `contacts-cleaner.accounts[0].app-password` | App password — never your real password |
+| `contacts-cleaner.accounts[0].enabled` | Participate in runs (default `true`) |
+| `contacts-cleaner.accounts[0].dry-run` | Compute + log changes only (default `false`, **start with `true`**) |
 
-Add more accounts as `ACCOUNT_1_*`, `ACCOUNT_2_*`, … (mirror the entries in
-`docker-compose.yml`). Without Docker, accounts can be listed directly in `.env`
-using property syntax — see the bottom of `.env.example`.
+Add more accounts as `contacts-cleaner.accounts[1].*`,
+`contacts-cleaner.accounts[2].*`, … . The same `.env` works for Maven and Docker.
 
 ### Cleaning rules
 

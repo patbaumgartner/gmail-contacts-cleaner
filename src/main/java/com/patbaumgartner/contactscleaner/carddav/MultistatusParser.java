@@ -56,6 +56,30 @@ class MultistatusParser {
 		return entries;
 	}
 
+	/**
+	 * Parses a {@code PROPFIND Depth:1} multistatus into resource references (href +
+	 * etag), skipping the collection itself (href ending with {@code /}) and any response
+	 * without an etag.
+	 * @param multistatusXml the raw XML body of a {@code 207 Multi-Status} response
+	 * @return the vCard resource references, never {@code null}
+	 * @throws CardDavException if the payload is not well-formed XML
+	 */
+	List<AddressBookEntry> parseResourceRefs(String multistatusXml) {
+		Document document = parseDocument(multistatusXml);
+		List<AddressBookEntry> refs = new ArrayList<>();
+
+		NodeList responses = document.getElementsByTagNameNS(DAV_NS, "response");
+		for (int i = 0; i < responses.getLength(); i++) {
+			Element response = (Element) responses.item(i);
+			String href = textOf(response, DAV_NS, "href");
+			String etag = textOf(response, DAV_NS, "getetag");
+			if (href != null && !href.isBlank() && !href.trim().endsWith("/") && etag != null && !etag.isBlank()) {
+				refs.add(new AddressBookEntry(href.trim(), etag, null));
+			}
+		}
+		return refs;
+	}
+
 	private Document parseDocument(String xml) {
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
