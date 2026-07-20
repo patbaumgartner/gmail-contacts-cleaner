@@ -113,7 +113,9 @@ Safety first:
 | Self-organization removal | `ORG` repeating the person's own name → dropped | ✅ on |
 | Dangling title removal | `TITLE` without any `ORG` (incl. orphaned by org removal) → dropped | ✅ on |
 | Organization removal | configurable names (e.g. defunct companies like `Namics`) → `ORG` dropped | ⛔ opt-in (empty) |
-| Custom-field removal | configurable labels; default `Age,Photo` — frozen ages and stale avatar links | ✅ on (`Age,Photo`) |
+| Additional-organizations removal | only the primary `ORG` survives — imported employment history dropped | ⛔ opt-in |
+| Custom-field removal | configurable labels; default `Age,Photo` — ⚠️ Google hides CSV custom fields from CardDAV, only in-vCard label debris is reachable | ✅ on (`Age,Photo`) |
+| Instant-messenger removal | `IMPP` handles (ICQ, AIM, Yahoo, Skype, …) — dead networks → dropped | ✅ on |
 | Invalid e-mail removal | `franz@`, `+41791234567` in the e-mail field → dropped (can never receive mail) | ✅ on |
 | Invalid phone removal | `*133#`, `12 9001`, `+4144` — wrong length/undialable for the country → dropped | ⛔ opt-in |
 | Fax number removal | `TEL;TYPE=FAX` (work + home) → dropped — it is not 1995 | ⛔ opt-in |
@@ -271,7 +273,9 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_REMOVE_INVALID_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop numbers invalid for their country |
 | `CONTACTS_CLEANER_REMOVE_FAX_NUMBERS` | `false` | ⚠️ Destructive — drop work/home fax numbers |
 | `CONTACTS_CLEANER_REMOVE_CUSTOM_FIELDS` | `Age,Photo` | Comma-separated custom-field labels to delete (empty = off) |
+| `CONTACTS_CLEANER_REMOVE_INSTANT_MESSENGERS` | `true` | Drop dead-network IM handles (`IMPP`) |
 | `CONTACTS_CLEANER_REMOVE_ORGANIZATIONS` | _(empty)_ | Comma-separated defunct organization names to delete |
+| `CONTACTS_CLEANER_REMOVE_ADDITIONAL_ORGANIZATIONS` | `false` | ⚠️ Destructive — keep only the primary organization |
 | `CONTACTS_CLEANER_REMOVE_REDUNDANT_ADDRESSES` | `true` | Collapse subset addresses into the richer one |
 | `CONTACTS_CLEANER_REMOVE_GEO_COORDINATE_ADDRESSES` | `true` | Drop coordinate-only addresses |
 | `CONTACTS_CLEANER_REMOVE_SELF_ORGANIZATIONS` | `true` | Drop orgs repeating the person's name |
@@ -345,6 +349,12 @@ A: No — deliberately. It *detects* them (shared phone/e-mail, near-identical o
 word-flipped names) and lists the pairs in the run summary and HTML report. Merging is
 best done with Google's own **"Merge & fix"** at contacts.google.com, which shows both
 cards side by side and lets you decide what survives.
+
+**Q: Why do CSV "custom fields" like `Age` survive a cleanup run?**
+A: Google does not expose custom fields over CardDAV — they exist in the CSV export
+and the web UI but are invisible to sync clients (verified against live data). Clean
+them once by hand: export CSV, delete the columns, re-import at contacts.google.com.
+Everything the protocol *does* expose is covered by the rules.
 
 **Q: My account uses Advanced Protection / no app passwords.**
 A: App passwords are unavailable under Google's Advanced Protection Program. You would

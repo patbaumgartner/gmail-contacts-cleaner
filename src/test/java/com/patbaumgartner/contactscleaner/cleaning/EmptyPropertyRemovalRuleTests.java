@@ -58,6 +58,19 @@ class EmptyPropertyRemovalRuleTests {
 	}
 
 	@Test
+	void removesBlankAndDuplicateExtendedProperties() {
+		VCard vcard = new VCard();
+		vcard.addExtendedProperty("X-ABLABEL", "");
+		vcard.addExtendedProperty("X-GENDER", "Male");
+		vcard.addExtendedProperty("X-GENDER", "Male");
+		vcard.addExtendedProperty("X-GENDER", "Male");
+
+		assertThat(rule.apply(vcard)).isTrue();
+		assertThat(vcard.getExtendedProperties()).hasSize(1);
+		assertThat(vcard.getExtendedProperties().getFirst().getValue()).isEqualTo("Male");
+	}
+
+	@Test
 	void reportsNoChangeForCleanContact() {
 		VCard vcard = new VCard();
 		vcard.addTelephoneNumber(new Telephone("+41446681800"));

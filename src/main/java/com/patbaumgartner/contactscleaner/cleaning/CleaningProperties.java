@@ -77,10 +77,19 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param removeOrganizations organization names to delete (case-insensitive prefix match
  * with word boundary, so {@code Namics} also matches {@code Namics AG}) — for companies
  * that no longer exist; empty by default
+ * @param removeInstantMessengers drop instant-messenger handles ({@code IMPP}: ICQ, AIM,
+ * Yahoo, Skype, ...) — dead networks Google's UI no longer shows
  * @param removeCustomFields labels of custom fields to delete (case-insensitive, matched
  * against Apple-style {@code X-ABLabel} groups and {@code X-<label>} properties);
  * defaults to {@code Age} (a never-updated age is misinformation) and {@code Photo}
- * (stale avatar links). Empty list disables the rule
+ * (stale avatar links). Empty list disables the rule. <strong>Note:</strong> Google does
+ * not expose custom fields over CardDAV — this rule only reaches label debris that
+ * appears in the vCards; fields like a CSV-exported {@code Age} are invisible to the
+ * protocol and must be cleaned once via CSV export/import
+ * @param removeAdditionalOrganizations keep only the primary organization and drop the
+ * rest — old LinkedIn/XING imports stored the whole employment history as extra
+ * {@code ORG} entries (Google shows them as "Other Organizations")
+ * (<strong>destructive</strong>, off by default)
  * @param removeSelfOrganizations drop organizations that merely repeat the person's own
  * name ({@code FN: Jane Doe}, {@code ORG: Jane Doe}) — an import artifact
  * @param removeDanglingTitles drop job titles when the contact has no organization
@@ -113,10 +122,12 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		@DefaultValue("true") boolean removeGeoCoordinateAddresses,
 		@DefaultValue("true") boolean detectDuplicateContacts, @DefaultValue("true") boolean repairFlippedNames,
 		@DefaultValue("true") boolean extractBirthdays, @DefaultValue("true") boolean removeSocialNetworkNotes,
-		@DefaultValue("true") boolean cleanUrls, @DefaultValue( {
+		@DefaultValue("true") boolean cleanUrls, @DefaultValue("true") boolean removeInstantMessengers, @DefaultValue( {
 				"Age", "Photo" }) List<String> removeCustomFields,
-		@DefaultValue("") List<String> removeOrganizations, @DefaultValue("true") boolean removeSelfOrganizations,
-		@DefaultValue("true") boolean removeDanglingTitles, @DefaultValue("true") boolean canonicalizeOrganizations,
+		@DefaultValue("") List<String> removeOrganizations,
+		@DefaultValue("false") boolean removeAdditionalOrganizations,
+		@DefaultValue("true") boolean removeSelfOrganizations, @DefaultValue("true") boolean removeDanglingTitles,
+		@DefaultValue("true") boolean canonicalizeOrganizations,
 		@DefaultValue("false") boolean removeSharedPhoneNumbers, @DefaultValue("2") int sharedPhoneNumberThreshold,
 		@DefaultValue("false") boolean removeNotes, @DefaultValue("false") boolean deleteEmptyContacts){
 
@@ -133,8 +144,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 */
 	public static CleaningProperties defaults() {
 		return new CleaningProperties(true, "", true, true, false, false, true, true, true, false, true, true, true,
-				true, true, true, true, true, true, true, true, true, List.of("Age", "Photo"), List.of(), true, true,
-				true, false, 2, false, false);
+				true, true, true, true, true, true, true, true, true, true, List.of("Age", "Photo"), List.of(), false,
+				true, true, true, false, 2, false, false);
 	}
 
 	/**
@@ -148,9 +159,9 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains, trimNames,
 				removeJunkNameSuffixes, repairNames, normalizeLabels, removeEmptyProperties, removeRedundantAddresses,
 				removeGeoCoordinateAddresses, detectDuplicateContacts, repairFlippedNames, extractBirthdays,
-				removeSocialNetworkNotes, cleanUrls, removeCustomFields, removeOrganizations, removeSelfOrganizations,
-				removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold,
-				removeNotes, deleteEmptyContacts);
+				removeSocialNetworkNotes, cleanUrls, removeInstantMessengers, removeCustomFields, removeOrganizations,
+				removeAdditionalOrganizations, removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations,
+				removeSharedPhoneNumbers, sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts);
 	}
 
 	/**
@@ -165,8 +176,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains, trimNames,
 				removeJunkNameSuffixes, repairNames, normalizeLabels, removeEmptyProperties, removeRedundantAddresses,
 				removeGeoCoordinateAddresses, detectDuplicateContacts, repairFlippedNames, extractBirthdays,
-				removeSocialNetworkNotes, cleanUrls, removeCustomFields, removeOrganizations, removeSelfOrganizations,
-				removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold,
-				removeNotes, deleteEmptyContacts);
+				removeSocialNetworkNotes, cleanUrls, removeInstantMessengers, removeCustomFields, removeOrganizations,
+				removeAdditionalOrganizations, removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations,
+				removeSharedPhoneNumbers, sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts);
 	}
 }
