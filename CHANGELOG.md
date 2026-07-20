@@ -6,21 +6,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
-
-- Name repair also flips "Last, First" display names (`Muster, Max` →
-  `Max Muster`), populating empty given/family fields; company-style names
-  and contradicting structured names are never touched
-- Instant-messenger removal (`remove-instant-messengers`, on by default): drops
-  IMPP handles of dead networks (ICQ, AIM, Yahoo, Skype, ...)
-- Empty-property rule also removes blank and exact-duplicate extended properties
-  (e.g. `X-GENDER:Male` repeated seven times)
-- Label normalization sweeps group-less `X-ABLabel` debris
-- Additional-organizations removal (`remove-additional-organizations`, opt-in):
-  keeps the primary organization, drops imported employment history
-- Documented CardDAV limitation: Google does not expose CSV custom fields
-  (`Age`, `Other Organizations`) to sync clients — one-time CSV cleanup required
-
 ## [1.0.0] - 2026-07-20
 
 Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for today's Google.
@@ -90,6 +75,18 @@ Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for to
   classification verified against the numbering plan via libphonenumber
 - Label normalization covers e-mail, phone and address labels (`Mobil` → CELL,
   fax labels → FAX type, unknown labels like `WhatsApp`/`Old` → default type)
+- Name repair also flips "Last, First" display names (`Muster, Max` →
+  `Max Muster`), populating empty given/family fields; company-style names
+  and contradicting structured names are never touched
+- Instant-messenger removal (`remove-instant-messengers`, on by default): drops
+  IMPP handles of dead networks (ICQ, AIM, Yahoo, Skype, ...)
+- Empty-property rule also removes blank and exact-duplicate extended properties
+  (e.g. `X-GENDER:Male` repeated seven times)
+- Label normalization sweeps group-less `X-ABLabel` debris
+- Additional-organizations removal (`remove-additional-organizations`, opt-in):
+  keeps the primary organization, drops imported employment history
+- Documented CardDAV limitation: Google does not expose CSV custom fields
+  (`Age`, `Other Organizations`) to sync clients — one-time CSV cleanup required
 
 **Cleaning rules (destructive, opt-in)**
 - Country-invalid phone number removal (libphonenumber validation)
