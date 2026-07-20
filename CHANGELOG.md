@@ -6,6 +6,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Name repair also strips wrapping quotes from names (`"Jane Doe"` → `Jane Doe`,
+  typographic quotes included); inner nickname quotes are preserved
+
 ## [1.0.0] - 2026-07-20
 
 Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for today's Google.

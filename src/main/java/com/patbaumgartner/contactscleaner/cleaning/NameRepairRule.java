@@ -22,6 +22,8 @@ import ezvcard.property.StructuredName;
  * hyphenated names capitalize both parts. Mixed-case names are never touched.</li>
  * <li><strong>Prefix canonicalization</strong> — {@code Dr} → {@code Dr.}, {@code Prof} →
  * {@code Prof.} (known honorifics only).</li>
+ * <li><strong>Quoted names</strong> — {@code "\"Jane Doe\""} loses its wrapping quotes
+ * (double, single or typographic), another messenger-import artifact.</li>
  * <li><strong>"Last, First" display names</strong> — {@code "Muster, Max"} becomes
  * {@code "Max Muster"}; the comma convention is unambiguous, and empty given/family
  * fields are populated from the parts.</li>
@@ -44,11 +46,50 @@ final class NameRepairRule implements VCardCleaningRule {
 	@Override
 	public boolean apply(VCard vcard) {
 		boolean changed = false;
+		changed |= stripWrappingQuotes(vcard);
 		changed |= rescueEmailsFromNameFields(vcard);
 		changed |= repairCommaFormattedDisplayName(vcard);
 		changed |= repairAllCapsComponents(vcard);
 		changed |= canonicalizePrefixes(vcard);
 		return changed;
+	}
+
+	// ── Quoted names ──────────────────────────────────────────────────────────
+
+	private static final Pattern WRAPPING_QUOTES = Pattern
+		.compile("^\\s*[\"'\u201c\u201d\u2018\u2019\u00ab\u00bb]+(.*?)[\"'\u201c\u201d\u2018\u2019\u00ab\u00bb]+\\s*$");
+
+	/** {@code "Jane Doe"} → {@code Jane Doe} — on FN, given and family alike. */
+	private boolean stripWrappingQuotes(VCard vcard) {
+		boolean changed = false;
+		FormattedName formatted = vcard.getFormattedName();
+		if (formatted != null && formatted.getValue() != null) {
+			String unquoted = unquote(formatted.getValue());
+			if (!unquoted.equals(formatted.getValue())) {
+				formatted.setValue(unquoted);
+				changed = true;
+			}
+		}
+		StructuredName name = vcard.getStructuredName();
+		if (name != null) {
+			if (name.getGiven() != null && !unquote(name.getGiven()).equals(name.getGiven())) {
+				name.setGiven(unquote(name.getGiven()));
+				changed = true;
+			}
+			if (name.getFamily() != null && !unquote(name.getFamily()).equals(name.getFamily())) {
+				name.setFamily(unquote(name.getFamily()));
+				changed = true;
+			}
+		}
+		return changed;
+	}
+
+	private String unquote(String value) {
+		var matcher = WRAPPING_QUOTES.matcher(value);
+		String result = matcher.matches() ? matcher.group(1).trim() : value;
+		// Only strip when the result is a plausible name — never leave it empty,
+		// and keep names with a legitimate inner quote (nicknames handled below).
+		return result.isEmpty() ? value : result;
 	}
 
 	// ── "Last, First" display names ───────────────────────────────────────────
