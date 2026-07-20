@@ -12,9 +12,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SharedPhoneNumberRemoverTests {
 
 	private static CleaningProperties enabled(int threshold) {
-		return new CleaningProperties(true, "", true, false, false, true, true, true, false, true, true, true, true,
-				true, true, true, true, false, true, true, true, java.util.List.of("Age"), java.util.List.of(), true,
-				true, true, true, threshold, false, false);
+		return new CleaningProperties(true, "", true, true, false, false, true, true, true, false, true, true, true,
+				true, true, true, true, true, false, true, true, true, java.util.List.of("Age"), java.util.List.of(),
+				true, true, true, true, threshold, false, false);
 	}
 
 	private static VCard contact(String name, String... numbers) {
