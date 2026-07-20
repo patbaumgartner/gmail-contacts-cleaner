@@ -1,0 +1,10 @@
+# Long-running server mode: built-in nightly scheduler, no startup run.
+spring:
+  main:
+    web-application-type: none
+
+contacts-cleaner:
+  startup-run:
+    enabled: "${CONTACTS_CLEANER_STARTUP_RUN_ENABLED:false}"
+  scheduler:
+    enabled: "${CONTACTS_CLEANER_SCHEDULER_ENABLED:true}"
