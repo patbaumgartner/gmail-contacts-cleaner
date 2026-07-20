@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -34,7 +35,7 @@ class GoogleCardDavClient implements CardDavClient {
 	private static final HttpMethod PROPFIND = HttpMethod.valueOf("PROPFIND");
 
 	/** Number of vCards requested per addressbook-multiget REPORT. */
-	private static final int MULTIGET_BATCH_SIZE = 100;
+	private static final int MULTIGET_BATCH_SIZE = 25;
 
 	private static final MediaType TEXT_VCARD = MediaType.parseMediaType("text/vcard; charset=utf-8");
 
@@ -76,7 +77,7 @@ class GoogleCardDavClient implements CardDavClient {
 			List<AddressBookEntry> entries = new ArrayList<>(refs.size());
 			for (int from = 0; from < refs.size(); from += MULTIGET_BATCH_SIZE) {
 				List<AddressBookEntry> batch = refs.subList(from, Math.min(from + MULTIGET_BATCH_SIZE, refs.size()));
-				entries.addAll(multiget(account, path, batch));
+				entries.addAll(multigetResilient(account, path, batch));
 			}
 			log.info("Fetched {} contacts for account '{}'", entries.size(), account.name());
 			return entries;
@@ -100,7 +101,31 @@ class GoogleCardDavClient implements CardDavClient {
 		return multistatusParser.parseResourceRefs((multistatus != null) ? multistatus : "");
 	}
 
-	/** Fetches the vCard payloads of the given resources via addressbook-multiget. */
+	/**
+	 * Fetches the vCard payloads of the given resources via addressbook-multiget. When
+	 * the server answers a batch with a 5xx error, the batch is bisected and retried, so
+	 * a single problematic contact (oversized photo, corrupt card) degrades into one
+	 * skipped entry instead of failing the whole account.
+	 */
+	private List<AddressBookEntry> multigetResilient(GoogleAccount account, String path, List<AddressBookEntry> refs) {
+		try {
+			return multiget(account, path, refs);
+		}
+		catch (HttpServerErrorException ex) {
+			if (refs.size() == 1) {
+				log.warn("Skipping contact {} for account '{}' — server error {} on single fetch",
+						refs.getFirst().href(), account.name(), ex.getStatusCode());
+				return List.of();
+			}
+			log.warn("Server error {} on multiget batch of {} for account '{}' — bisecting and retrying",
+					ex.getStatusCode(), refs.size(), account.name());
+			int middle = refs.size() / 2;
+			List<AddressBookEntry> entries = new ArrayList<>(multigetResilient(account, path, refs.subList(0, middle)));
+			entries.addAll(multigetResilient(account, path, refs.subList(middle, refs.size())));
+			return entries;
+		}
+	}
+
 	private List<AddressBookEntry> multiget(GoogleAccount account, String path, List<AddressBookEntry> refs) {
 		StringBuilder body = new StringBuilder("""
 				<?xml version="1.0" encoding="UTF-8"?>
@@ -118,7 +143,8 @@ class GoogleCardDavClient implements CardDavClient {
 		String multistatus = restClient.method(REPORT)
 			.uri(path)
 			.headers((headers) -> authenticate(headers, account))
-			.header("Depth", "1")
+			// addressbook-multiget is a Depth:0 report (RFC 6352 §8.7)
+			.header("Depth", "0")
 			.contentType(MediaType.APPLICATION_XML)
 			.body(body.toString())
 			.retrieve()
