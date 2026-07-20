@@ -10,8 +10,8 @@ import ezvcard.property.Telephone;
  * parentheses) and rewrites the international call prefix {@code 00} to {@code +}.
  *
  * <p>
- * Examples: {@code "044 668-18 00"} → {@code "0446681800"}, {@code "0041 44 668 18 00"}
- * → {@code "+41446681800"}.
+ * Examples: {@code "044 668-18 00"} → {@code "0446681800"}, {@code "0041 44 668 18 00"} →
+ * {@code "+41446681800"}.
  */
 final class PhoneNumberNormalizationRule implements VCardCleaningRule {
 

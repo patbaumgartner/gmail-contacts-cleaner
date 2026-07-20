@@ -28,7 +28,7 @@ import org.springframework.validation.annotation.Validated;
  */
 @Validated
 @ConfigurationProperties(prefix = "contacts-cleaner")
-public record AccountsProperties(@Valid List<GoogleAccount> accounts) {
+public record AccountsProperties(List<@Valid GoogleAccount> accounts) {
 
 	public AccountsProperties {
 		accounts = (accounts != null) ? List.copyOf(accounts) : List.of();

@@ -4,9 +4,9 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Domain event published after a full cleanup run over all enabled accounts. Consumed
- * by the {@code reporting} module; new consumers (e-mail, push notifications, metrics)
- * can subscribe without touching the orchestration logic.
+ * Domain event published after a full cleanup run over all enabled accounts. Consumed by
+ * the {@code reporting} module; new consumers (e-mail, push notifications, metrics) can
+ * subscribe without touching the orchestration logic.
  *
  * @param completedAt when the run finished
  * @param results the per-account results, in configuration order

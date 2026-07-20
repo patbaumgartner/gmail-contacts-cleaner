@@ -31,9 +31,9 @@ import org.springframework.stereotype.Service;
  * </ol>
  *
  * <p>
- * Accounts are isolated from each other: a failure in one account is recorded and the
- * run continues with the next account. Runs are mutually exclusive — a run triggered
- * while another is in progress is skipped.
+ * Accounts are isolated from each other: a failure in one account is recorded and the run
+ * continues with the next account. Runs are mutually exclusive — a run triggered while
+ * another is in progress is skipped.
  */
 @Service
 public class ContactsCleanupService {

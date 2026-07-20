@@ -1,8 +1,8 @@
 package com.patbaumgartner.contactscleaner.carddav;
 
 /**
- * Raised when a CardDAV request fails — network problems, authentication failures
- * (wrong app password), or unexpected server responses.
+ * Raised when a CardDAV request fails — network problems, authentication failures (wrong
+ * app password), or unexpected server responses.
  */
 public class CardDavException extends RuntimeException {
 
