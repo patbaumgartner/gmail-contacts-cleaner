@@ -61,7 +61,14 @@ final class GoogleCsvContacts {
 		}
 
 		for (int i = 1; i <= 6; i++) {
-			multiValues(row.get("Phone " + i + " - Value")).forEach(vcard::addTelephoneNumber);
+			String label = row.getOrDefault("Phone " + i + " - Label", "");
+			for (String number : multiValues(row.get("Phone " + i + " - Value"))) {
+				ezvcard.property.Telephone telephone = new ezvcard.property.Telephone(number);
+				if (label.toLowerCase(java.util.Locale.ROOT).contains("fax")) {
+					telephone.getTypes().add(ezvcard.parameter.TelephoneType.FAX);
+				}
+				vcard.addTelephoneNumber(telephone);
+			}
 		}
 		for (int i = 1; i <= 5; i++) {
 			multiValues(row.get("E-mail " + i + " - Value")).forEach(vcard::addEmail);

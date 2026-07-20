@@ -105,6 +105,7 @@ Safety first:
 | Dead-service URL removal | Klout, Gravatar, Google+, Picasa, FriendFeed links dropped; URLs trimmed + deduplicated | ✅ on |
 | Invalid e-mail removal | `franz@`, `+41791234567` in the e-mail field → dropped (can never receive mail) | ✅ on |
 | Invalid phone removal | `*133#`, `12 9001`, `+4144` — wrong length/undialable for the country → dropped | ⛔ opt-in |
+| Fax number removal | `TEL;TYPE=FAX` (work + home) → dropped — it is not 1995 | ⛔ opt-in |
 | E-mail domain verification | DNS lookup: domain gone (NXDOMAIN) → address dropped; timeouts never count | ⛔ opt-in |
 | Shared phone number removal | number on ≥ 2 contacts = switchboard/household line → dropped, direct lines kept | ⛔ opt-in |
 | Note removal | deletes free-text notes | ⛔ opt-in |
@@ -253,6 +254,7 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_REMOVE_SOCIAL_NETWORK_NOTES` | `true` | Strip XING/LinkedIn sync lines from notes |
 | `CONTACTS_CLEANER_REMOVE_INVALID_EMAILS` | `true` | Drop syntactically broken e-mail addresses |
 | `CONTACTS_CLEANER_REMOVE_INVALID_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop numbers invalid for their country |
+| `CONTACTS_CLEANER_REMOVE_FAX_NUMBERS` | `false` | ⚠️ Destructive — drop work/home fax numbers |
 | `CONTACTS_CLEANER_VERIFY_EMAIL_DOMAINS` | `false` | ⚠️ DNS check — drop addresses of dead domains |
 | `CONTACTS_CLEANER_REMOVE_SHARED_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop switchboard numbers |
 | `CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD` | `2` | Contacts sharing a number before it is removed (3 keeps couples' landlines) |
