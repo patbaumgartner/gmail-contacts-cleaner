@@ -54,4 +54,13 @@
     <Class name="com.patbaumgartner.contactscleaner.carddav.GoogleCardDavClient" />
   </Match>
 
+  <!-- NameRepairRule.sanitize() chains regex replacements before use; nothing is
+       "validated" security-wise — the strings are the user's own contact names, and
+       the transformation order (noise removal, quote strip, whitespace collapse) is
+       intentional. -->
+  <Match>
+    <Bug pattern="MODIFICATION_AFTER_VALIDATION" />
+    <Class name="com.patbaumgartner.contactscleaner.cleaning.NameRepairRule" />
+  </Match>
+
 </FindBugsFilter>

@@ -8,8 +8,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Name repair also strips wrapping quotes from names (`"Jane Doe"` → `Jane Doe`,
-  typographic quotes included); inner nickname quotes are preserved
+- Name repair sanitizes every name component: boundary quotes (even one-sided
+  strays, typographic variants included), emojis and invisible characters are
+  removed, whitespace collapsed; inner nickname quotes are preserved
 
 ## [1.0.0] - 2026-07-20
 

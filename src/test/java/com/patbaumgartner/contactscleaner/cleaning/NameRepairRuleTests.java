@@ -107,6 +107,47 @@ class NameRepairRuleTests {
 	}
 
 	@Test
+	void stripsOneSidedStrayQuotes() {
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new FormattedName("\"Jane Doe"));
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Jane Doe");
+	}
+
+	@Test
+	void removesEmojisAndInvisibleCharacters() {
+		VCard vcard = new VCard();
+		StructuredName name = new StructuredName();
+		name.setGiven("Jane \uD83C\uDF38"); // 🌸
+		name.setFamily("Doe\u200D"); // zero-width joiner
+		vcard.setStructuredName(name);
+		vcard.setFormattedName(new FormattedName("Jane \uD83C\uDF38 Doe \u2764\uFE0F")); // 🌸
+																							// +
+																							// ❤️
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getStructuredName().getGiven()).isEqualTo("Jane");
+		assertThat(vcard.getStructuredName().getFamily()).isEqualTo("Doe");
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Jane Doe");
+	}
+
+	@Test
+	void sanitizesQuotedSuffixesAndCollapsesWhitespace() {
+		VCard vcard = new VCard();
+		StructuredName name = new StructuredName();
+		name.setGiven("Jane");
+		name.setFamily("Doe");
+		name.getSuffixes().add("'PMP'");
+		vcard.setStructuredName(name);
+		vcard.setFormattedName(new FormattedName("Jane   Doe"));
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getStructuredName().getSuffixes()).containsExactly("PMP");
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Jane Doe");
+	}
+
+	@Test
 	void quoteOnlyNamesAreNotEmptied() {
 		VCard vcard = new VCard();
 		vcard.setFormattedName(new FormattedName("\"\""));
