@@ -7,8 +7,8 @@ import ezvcard.VCard;
 import ezvcard.property.Email;
 
 /**
- * Normalizes e-mail addresses: trims whitespace and lower-cases the address.
- * E-mail addresses are case-insensitive in practice, and Google treats
+ * Normalizes e-mail addresses: trims whitespace and lower-cases the address. E-mail
+ * addresses are case-insensitive in practice, and Google treats
  * {@code Jane.Doe@gmail.com} and {@code jane.doe@gmail.com} as the same mailbox.
  */
 final class EmailNormalizationRule implements VCardCleaningRule {

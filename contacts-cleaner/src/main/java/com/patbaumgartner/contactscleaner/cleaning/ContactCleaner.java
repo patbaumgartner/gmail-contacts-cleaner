@@ -26,7 +26,7 @@ public class ContactCleaner {
 
 	private final CleaningProperties properties;
 
-	ContactCleaner(CleaningProperties properties) {
+	public ContactCleaner(CleaningProperties properties) {
 		this.properties = properties;
 		this.rules = buildRules(properties);
 	}

@@ -1,0 +1,5 @@
+contacts-cleaner:
+  startup-run:
+    enabled: false
+  scheduler:
+    enabled: false
