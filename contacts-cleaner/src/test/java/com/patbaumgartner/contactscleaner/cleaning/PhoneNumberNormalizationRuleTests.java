@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class PhoneNumberNormalizationRuleTests {
 
-	private final PhoneNumberNormalizationRule rule = new PhoneNumberNormalizationRule();
+	private final PhoneNumberNormalizationRule rule = new PhoneNumberNormalizationRule("");
 
 	@ParameterizedTest(name = "\"{0}\" -> \"{1}\"")
 	@CsvSource(textBlock = """

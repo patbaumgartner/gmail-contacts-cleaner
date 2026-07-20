@@ -24,10 +24,15 @@ class CleanupSummaryReporter {
 		StringBuilder summary = new StringBuilder("Cleanup run summary:");
 		for (AccountCleanupResult result : event.results()) {
 			summary.append(System.lineSeparator())
-				.append("  - %s: %s | %d contacts, %d updated, %d deleted%s (%d ms)%s".formatted(result.accountName(),
-						result.successful() ? "OK" : "FAILED", result.totalContacts(), result.updatedContacts(),
-						result.deletedContacts(), result.dryRun() ? " [dry run]" : "", result.durationMs(),
-						result.successful() ? "" : " — " + result.message()));
+				.append("  - %s: %s | %d contacts, %d updated, %d deleted, %d duplicate candidates%s (%d ms)%s"
+					.formatted(result.accountName(), result.successful() ? "OK" : "FAILED", result.totalContacts(),
+							result.updatedContacts(), result.deletedContacts(), result.duplicateCandidates().size(),
+							result.dryRun() ? " [dry run]" : "", result.durationMs(),
+							result.successful() ? "" : " — " + result.message()));
+			result.duplicateCandidates()
+				.forEach((duplicate) -> summary.append(System.lineSeparator())
+					.append("      · possible duplicate: '%s' ↔ '%s' (%s)".formatted(duplicate.firstContact(),
+							duplicate.secondContact(), duplicate.reason())));
 		}
 		log.info("{}", summary);
 	}

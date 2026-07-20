@@ -92,10 +92,13 @@ Safety first:
 | Rule | Example | Default |
 |---|---|---|
 | Phone number normalization | `0041 44-668.18 00` → `+41446681800` | ✅ on |
+| E.164 formatting (with `phone-region`) | `044 668 18 00` → `+41446681800` (via [libphonenumber](https://github.com/google/libphonenumber)) | ✅ when region set |
 | Duplicate phone number removal | `+41446681800`, `0041446681800` → one entry | ✅ on |
 | E-mail normalization | ` Jane.Doe@GMAIL.com ` → `jane.doe@gmail.com` | ✅ on |
 | Duplicate e-mail removal | keeps the first occurrence | ✅ on |
 | Name trimming | `" Jane  Doe "` → `"Jane Doe"` | ✅ on |
+| Empty property removal | `EMAIL:`, `ORG:;;`, all-blank `ADR` → dropped | ✅ on |
+| Duplicate **contact** detection | two cards sharing a phone/e-mail or near-identical name → **reported in the log, never merged** | ✅ on (report-only) |
 | Note removal | deletes free-text notes | ⛔ opt-in |
 | Empty contact deletion | no phone **and** no e-mail → delete | ⛔ opt-in |
 
@@ -234,10 +237,13 @@ using property syntax — see the bottom of `.env.example`.
 | Variable | Default | Description |
 |---|---|---|
 | `CONTACTS_CLEANER_NORMALIZE_PHONE_NUMBERS` | `true` | Strip separators, `00` → `+` |
+| `CONTACTS_CLEANER_PHONE_REGION` | _(empty)_ | ISO country (e.g. `CH`) — enables E.164 formatting of national numbers |
 | `CONTACTS_CLEANER_REMOVE_DUPLICATE_PHONE_NUMBERS` | `true` | Deduplicate per contact |
 | `CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES` | `true` | Lower-case + trim |
 | `CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES` | `true` | Deduplicate per contact |
 | `CONTACTS_CLEANER_TRIM_NAMES` | `true` | Trim name whitespace |
+| `CONTACTS_CLEANER_REMOVE_EMPTY_PROPERTIES` | `true` | Drop blank `TEL`/`EMAIL`/`URL`/`NOTE`, all-blank `ORG`/`ADR` |
+| `CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS` | `true` | Report-only: log likely duplicate contact pairs |
 | `CONTACTS_CLEANER_REMOVE_NOTES` | `false` | ⚠️ Destructive — delete notes |
 | `CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS` | `false` | ⚠️ Destructive — delete empty contacts |
 
@@ -289,8 +295,10 @@ with `dry-run: true` and read the log. Writes are etag-guarded, so concurrent ed
 from your phone always win.
 
 **Q: Does it merge duplicate contacts (two cards for the same person)?**
-A: Not yet — that requires fuzzy matching and is on the roadmap. Today's scope is
-cleaning *within* each contact, like the 2011 original.
+A: It *detects* them — pairs sharing a phone number, e-mail address, or a near-identical
+name (Jaro-Winkler) are reported in the run summary. Merging stays a deliberate human
+action in the Google Contacts UI: which card wins and which data survives requires
+judgment no heuristic should make for you.
 
 **Q: My account uses Advanced Protection / no app passwords.**
 A: App passwords are unavailable under Google's Advanced Protection Program. You would
