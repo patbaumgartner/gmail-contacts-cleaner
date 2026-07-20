@@ -1,0 +1,79 @@
+##############################################################################
+# Swiss Coupon Booster – .gitignore
+# Covers: Java/Maven (coupon-booster/) and Python (patchright/)
+##############################################################################
+
+# ── Secrets — never commit ────────────────────────────────────────────────────
+.env
+*.env.local
+
+# ── Java / Maven (coupon-booster/) ───────────────────────────────────────────
+coupon-booster/target/
+coupon-booster/pom.xml.bak
+coupon-booster/pom.xml.versionBackup
+HELP.md
+
+# Maven wrapper binary (downloaded on demand, not committed)
+coupon-booster/.mvn/wrapper/maven-wrapper.jar
+
+# IDE project files
+.idea/
+*.iws
+*.iml
+*.ipr
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+.apt_generated/
+
+# NetBeans
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# VS Code
+.vscode/
+
+# Build outputs inside src (Maven test-filtered resources)
+!**/src/main/**/target/
+!**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# ── Python (patchright/) ─────────────────────────────────────────────────
+patchright/.venv/
+patchright/__pycache__/
+patchright/**/__pycache__/
+patchright/.pytest_cache/
+patchright/*.egg-info/
+patchright/dist/
+patchright/build/
+patchright/.mypy_cache/
+patchright/.ruff_cache/
+
+# Python byte-compiled files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# ── Docker runtime artefacts ──────────────────────────────────────────────────
+# Local volume data (never commit browser sessions or screenshots)
+playwright-user-data/
+retailer-b-data/
+retailer-user-data/
+screenshots/
+
+# Passkey credentials contain a private key — never commit them
+retailer-passkey.json
+*passkey*.json
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+cookies.txt
+retailer-cookies.txt
+*.log
