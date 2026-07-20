@@ -23,23 +23,13 @@ services:
     image: patbaumgartner/contacts-cleaner:${VERSION:-latest}
     container_name: contacts-cleaner
     restart: "no"
+    env_file:
+      - .env
     environment:
       # ── Runtime mode ──────────────────────────────────────────────────────────
       # Empty → one-shot run at startup, then exit.
       # 'server' → long-running with built-in nightly scheduler.
       SPRING_PROFILES_ACTIVE: "${SPRING_PROFILES_ACTIVE:-}"
-
-      # ── Accounts (add ACCOUNTS_2_, ACCOUNTS_3_, ... as needed) ────────────────
-      CONTACTSCLEANER_ACCOUNTS_0_NAME: "${ACCOUNT_0_NAME:-personal}"
-      CONTACTSCLEANER_ACCOUNTS_0_EMAIL: "${ACCOUNT_0_EMAIL}"
-      CONTACTSCLEANER_ACCOUNTS_0_APPPASSWORD: "${ACCOUNT_0_APP_PASSWORD}"
-      CONTACTSCLEANER_ACCOUNTS_0_ENABLED: "${ACCOUNT_0_ENABLED:-true}"
-      CONTACTSCLEANER_ACCOUNTS_0_DRYRUN: "${ACCOUNT_0_DRY_RUN:-false}"
-      CONTACTSCLEANER_ACCOUNTS_1_NAME: "${ACCOUNT_1_NAME:-}"
-      CONTACTSCLEANER_ACCOUNTS_1_EMAIL: "${ACCOUNT_1_EMAIL:-}"
-      CONTACTSCLEANER_ACCOUNTS_1_APPPASSWORD: "${ACCOUNT_1_APP_PASSWORD:-}"
-      CONTACTSCLEANER_ACCOUNTS_1_ENABLED: "${ACCOUNT_1_ENABLED:-false}"
-      CONTACTSCLEANER_ACCOUNTS_1_DRYRUN: "${ACCOUNT_1_DRY_RUN:-false}"
 
       # ── Scheduler (server mode only) ──────────────────────────────────────────
       CONTACTS_CLEANER_SCHEDULER_CRON: "${CONTACTS_CLEANER_SCHEDULER_CRON:-0 0 3 * * *}"

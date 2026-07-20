@@ -77,6 +77,30 @@ class CleanupEndToEndIT {
 			</d:multistatus>
 			""";
 
+	private static final String PROPFIND_MULTISTATUS = """
+			<?xml version="1.0" encoding="UTF-8"?>
+			<d:multistatus xmlns:d="DAV:">
+			  <d:response>
+			    <d:href>/carddav/v1/principals/jane.doe%40gmail.com/lists/default/</d:href>
+			    <d:propstat><d:status>HTTP/1.1 200 OK</d:status><d:prop/></d:propstat>
+			  </d:response>
+			  <d:response>
+			    <d:href>/carddav/v1/principals/jane.doe%40gmail.com/lists/default/dirty</d:href>
+			    <d:propstat>
+			      <d:status>HTTP/1.1 200 OK</d:status>
+			      <d:prop><d:getetag>"etag-dirty"</d:getetag></d:prop>
+			    </d:propstat>
+			  </d:response>
+			  <d:response>
+			    <d:href>/carddav/v1/principals/jane.doe%40gmail.com/lists/default/empty</d:href>
+			    <d:propstat>
+			      <d:status>HTTP/1.1 200 OK</d:status>
+			      <d:prop><d:getetag>"etag-empty"</d:getetag></d:prop>
+			    </d:propstat>
+			  </d:response>
+			</d:multistatus>
+			""";
+
 	@Autowired
 	private ContactsCleanupService cleanupService;
 
@@ -109,6 +133,7 @@ class CleanupEndToEndIT {
 		String method = exchange.getRequestMethod();
 		String path = exchange.getRequestURI().getPath();
 		switch (method) {
+			case "PROPFIND" -> respond(exchange, 207, PROPFIND_MULTISTATUS);
 			case "REPORT" -> respond(exchange, 207, MULTISTATUS);
 			case "PUT" -> {
 				updates.put(path, new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
