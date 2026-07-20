@@ -8,9 +8,9 @@ import ezvcard.VCard;
 import ezvcard.property.Telephone;
 
 /**
- * Removes duplicate phone numbers within a single contact, keeping the first
- * occurrence. Intended to run <em>after</em> {@link PhoneNumberNormalizationRule} so
- * that {@code "+41 44 668 18 00"} and {@code "0041446681800"} are recognized as equal.
+ * Removes duplicate phone numbers within a single contact, keeping the first occurrence.
+ * Intended to run <em>after</em> {@link PhoneNumberNormalizationRule} so that
+ * {@code "+41 44 668 18 00"} and {@code "0041446681800"} are recognized as equal.
  */
 final class DuplicatePhoneNumberRemovalRule implements VCardCleaningRule {
 

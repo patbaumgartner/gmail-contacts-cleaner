@@ -1,5 +1,6 @@
 package com.patbaumgartner.contactscleaner.carddav;
 
+import java.net.URI;
 import java.util.List;
 
 import com.patbaumgartner.contactscleaner.account.GoogleAccount;
@@ -76,10 +77,8 @@ class GoogleCardDavClient implements CardDavClient {
 			return entries;
 		}
 		catch (RestClientException ex) {
-			throw new CardDavException(
-					"Failed to fetch contacts for account '%s' — check e-mail and app password"
-						.formatted(account.name()),
-					ex);
+			throw new CardDavException("Failed to fetch contacts for account '%s' — check e-mail and app password"
+				.formatted(account.name()), ex);
 		}
 	}
 
@@ -88,7 +87,7 @@ class GoogleCardDavClient implements CardDavClient {
 		log.debug("Updating contact {} for account '{}'", entry.href(), account.name());
 		try {
 			restClient.put()
-				.uri(entry.href())
+				.uri(resourceUri(entry))
 				.headers((headers) -> conditional(authenticateHeaders(headers, account), entry))
 				.contentType(TEXT_VCARD)
 				.body(vcard)
@@ -97,8 +96,8 @@ class GoogleCardDavClient implements CardDavClient {
 			pause();
 		}
 		catch (RestClientException ex) {
-			throw new CardDavException("Failed to update contact %s for account '%s'".formatted(entry.href(),
-					account.name()), ex);
+			throw new CardDavException(
+					"Failed to update contact %s for account '%s'".formatted(entry.href(), account.name()), ex);
 		}
 	}
 
@@ -107,16 +106,24 @@ class GoogleCardDavClient implements CardDavClient {
 		log.debug("Deleting contact {} for account '{}'", entry.href(), account.name());
 		try {
 			restClient.delete()
-				.uri(entry.href())
+				.uri(resourceUri(entry))
 				.headers((headers) -> conditional(authenticateHeaders(headers, account), entry))
 				.retrieve()
 				.toBodilessEntity();
 			pause();
 		}
 		catch (RestClientException ex) {
-			throw new CardDavException("Failed to delete contact %s for account '%s'".formatted(entry.href(),
-					account.name()), ex);
+			throw new CardDavException(
+					"Failed to delete contact %s for account '%s'".formatted(entry.href(), account.name()), ex);
 		}
+	}
+
+	/**
+	 * Builds the absolute resource URI from an already percent-encoded href. The href
+	 * must not run through URI template expansion, which would double-encode it.
+	 */
+	private URI resourceUri(AddressBookEntry entry) {
+		return URI.create(properties.baseUrl() + entry.href());
 	}
 
 	private void authenticate(HttpHeaders headers, GoogleAccount account) {

@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same branch/PR when a new commit is pushed.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+env:
+  JAVA_VERSION: "25"
+  MAVEN_OPTS: "-Xmx1024m -XX:+UseG1GC"
+
+jobs:
+  # ── Java / Spring Boot ──────────────────────────────────────────────────────
+  java:
+    name: Java – Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: contacts-cleaner
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Check code formatting
+        run: ./mvnw spring-javaformat:validate -ntp
+
+      - name: Build, test & verify
+        # OWASP dependency-check is skipped here (it downloads the full NVD feed).
+        # Run it from the release pipeline or a dedicated scheduled workflow instead.
+        run: ./mvnw clean verify -ntp -Dmaven.test.failure.ignore=true -Ddependency-check.skip=true
+        env:
+          MAVEN_OPTS: ${{ env.MAVEN_OPTS }}
+
+      - name: Publish test results
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
+        if: always()
+        with:
+          name: "Test Results – Java ${{ env.JAVA_VERSION }}"
+          path: "contacts-cleaner/target/surefire-reports/*.xml,contacts-cleaner/target/failsafe-reports/TEST-*.xml"
+          reporter: java-junit
+          fail-on-error: true
+
+  # ── Docker: publish native image as snapshot + latest (main pushes only) ────
+  # Runs only on direct pushes to main / manual dispatch (never on PRs or forks,
+  # where the Docker Hub secrets are unavailable). Publishes the GraalVM native
+  # application image, tagged with the current project version and :latest.
+  docker:
+    name: Docker – Publish snapshot & latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs: [java]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: contacts-cleaner
+    env:
+      MAVEN_OPTS: "-Xmx2048m -XX:+UseG1GC"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Resolve project version
+        id: version
+        run: echo "version=$(./mvnw -q -ntp help:evaluate -Dexpression=project.version -DforceStdout)" >> "$GITHUB_OUTPUT"
+
+      # -Pnative + BP_NATIVE_IMAGE=true compile a GraalVM native image (x86-64-v2).
+      # AOT pins the `server` profile (see pom.xml native profile).
+      - name: Build & publish native image (snapshot & latest)
+        run: |
+          ./mvnw -B -ntp -Pnative spring-boot:build-image -DskipTests \
+            -Dspring-boot.build-image.publish=true \
+            -Dspring-boot.build-image.imageName=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/contacts-cleaner:${{ steps.version.outputs.version }}
+          docker buildx imagetools create \
+            --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/contacts-cleaner:latest \
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/contacts-cleaner:${{ steps.version.outputs.version }}

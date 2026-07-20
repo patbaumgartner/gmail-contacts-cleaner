@@ -1,20 +1,19 @@
 ##############################################################################
-# Swiss Coupon Booster – .gitignore
-# Covers: Java/Maven (coupon-booster/) and Python (patchright/)
+# Gmail Contacts Cleaner – .gitignore
 ##############################################################################
 
 # ── Secrets — never commit ────────────────────────────────────────────────────
 .env
 *.env.local
 
-# ── Java / Maven (coupon-booster/) ───────────────────────────────────────────
-coupon-booster/target/
-coupon-booster/pom.xml.bak
-coupon-booster/pom.xml.versionBackup
+# ── Java / Maven (contacts-cleaner/) ──────────────────────────────────────────
+contacts-cleaner/target/
+contacts-cleaner/pom.xml.bak
+contacts-cleaner/pom.xml.versionBackup
 HELP.md
 
 # Maven wrapper binary (downloaded on demand, not committed)
-coupon-booster/.mvn/wrapper/maven-wrapper.jar
+contacts-cleaner/.mvn/wrapper/maven-wrapper.jar
 
 # IDE project files
 .idea/
@@ -45,35 +44,5 @@ nbdist/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-# ── Python (patchright/) ─────────────────────────────────────────────────
-patchright/.venv/
-patchright/__pycache__/
-patchright/**/__pycache__/
-patchright/.pytest_cache/
-patchright/*.egg-info/
-patchright/dist/
-patchright/build/
-patchright/.mypy_cache/
-patchright/.ruff_cache/
-
-# Python byte-compiled files
-*.pyc
-*.pyo
-*.pyd
-__pycache__/
-
-# ── Docker runtime artefacts ──────────────────────────────────────────────────
-# Local volume data (never commit browser sessions or screenshots)
-playwright-user-data/
-coop-user-data/
-migros-user-data/
-screenshots/
-
-# Passkey credentials contain a private key — never commit them
-migros-passkey.json
-*passkey*.json
-
 # ── Misc ─────────────────────────────────────────────────────────────────────
-cookies.txt
-migros-cookies.txt
 *.log

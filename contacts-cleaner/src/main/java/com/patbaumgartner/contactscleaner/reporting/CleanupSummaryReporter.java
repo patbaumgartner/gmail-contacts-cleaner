@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
 /**
  * Renders a human-readable summary after every cleanup run. Decoupled from the
  * orchestration workflow through the {@link CleanupRunCompleted} domain event —
- * additional reporters (e-mail, ntfy, metrics) can be added as further listeners
- * without modifying the orchestration module.
+ * additional reporters (e-mail, ntfy, metrics) can be added as further listeners without
+ * modifying the orchestration module.
  */
 @Component
 class CleanupSummaryReporter {

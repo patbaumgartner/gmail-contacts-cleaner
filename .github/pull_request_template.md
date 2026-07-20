@@ -21,7 +21,7 @@ List the exact steps to verify this change.
 - [ ] I ran relevant tests locally
 - [ ] I updated documentation when needed
 - [ ] I verified no credentials or secrets were added
-- [ ] I kept Coop and Migros behavior consistent where applicable
+- [ ] I verified destructive changes are opt-in and covered by dry-run support
 
 ## Related issues
 

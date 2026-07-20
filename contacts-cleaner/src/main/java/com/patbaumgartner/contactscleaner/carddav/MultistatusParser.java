@@ -1,16 +1,19 @@
 package com.patbaumgartner.contactscleaner.carddav;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import org.springframework.stereotype.Component;
 
@@ -19,9 +22,9 @@ import org.springframework.stereotype.Component;
  * {@code addressbook-query} REPORT (RFC 6352) into {@link AddressBookEntry} instances.
  *
  * <p>
- * Only {@code response} elements with an HTTP {@code 200} propstat status and a
- * non-empty {@code address-data} property are returned; collection resources and
- * partial errors are skipped.
+ * Only {@code response} elements with an HTTP {@code 200} propstat status and a non-empty
+ * {@code address-data} property are returned; collection resources and partial errors are
+ * skipped.
  */
 @Component
 class MultistatusParser {
@@ -62,10 +65,9 @@ class MultistatusParser {
 			factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
 			factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
 			factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-			return factory.newDocumentBuilder()
-				.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+			return factory.newDocumentBuilder().parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
 		}
-		catch (Exception ex) {
+		catch (ParserConfigurationException | SAXException | IOException ex) {
 			throw new CardDavException("Failed to parse CardDAV multistatus response", ex);
 		}
 	}
