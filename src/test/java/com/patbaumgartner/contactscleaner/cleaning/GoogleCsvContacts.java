@@ -76,6 +76,17 @@ final class GoogleCsvContacts {
 		for (int i = 1; i <= 2; i++) {
 			multiValues(row.get("Website " + i + " - Value")).forEach(vcard::addUrl);
 		}
+		for (int i = 1; i <= 3; i++) {
+			String label = row.getOrDefault("Custom Field " + i + " - Label", "");
+			String value = row.getOrDefault("Custom Field " + i + " - Value", "");
+			if (!label.isBlank() && !value.isBlank()) {
+				String group = "itemc" + i;
+				ezvcard.property.RawProperty abLabel = vcard.addExtendedProperty("X-ABLabel", label);
+				abLabel.setGroup(group);
+				ezvcard.property.RawProperty custom = vcard.addExtendedProperty("X-ABCustom", value);
+				custom.setGroup(group);
+			}
+		}
 		return vcard;
 	}
 
