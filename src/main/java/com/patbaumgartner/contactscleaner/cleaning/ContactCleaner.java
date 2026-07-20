@@ -36,6 +36,9 @@ public class ContactCleaner {
 		if (properties.removeEmptyProperties()) {
 			rules.add(new EmptyPropertyRemovalRule());
 		}
+		if (properties.removeRedundantAddresses()) {
+			rules.add(new RedundantAddressRemovalRule());
+		}
 		if (properties.trimNames()) {
 			rules.add(new NameTrimmingRule());
 		}
@@ -79,6 +82,9 @@ public class ContactCleaner {
 		}
 		if (!properties.removeCustomFields().isEmpty()) {
 			rules.add(new CustomFieldRemovalRule(properties.removeCustomFields()));
+		}
+		if (!properties.removeOrganizations().isEmpty()) {
+			rules.add(new OrganizationRemovalRule(properties.removeOrganizations()));
 		}
 		if (properties.removeNotes()) {
 			rules.add(new NoteRemovalRule());
