@@ -31,6 +31,25 @@ final class EmptyPropertyRemovalRule implements VCardCleaningRule {
 		changed |= removeBlankText(vcard.getNotes().iterator(), Note::getValue);
 		changed |= removeBlankOrganizations(vcard);
 		changed |= removeBlankAddresses(vcard);
+		changed |= removeBlankAndDuplicateExtendedProperties(vcard);
+		return changed;
+	}
+
+	/**
+	 * Blank extended properties ({@code X-ABLABEL:}) and exact duplicates
+	 * ({@code X-GENDER:Male} seven times on one card) are sync debris too.
+	 */
+	private boolean removeBlankAndDuplicateExtendedProperties(VCard vcard) {
+		boolean changed = false;
+		java.util.Set<String> seen = new java.util.HashSet<>();
+		for (ezvcard.property.RawProperty property : List.copyOf(vcard.getExtendedProperties())) {
+			boolean blank = property.getValue() == null || property.getValue().isBlank();
+			String key = property.getPropertyName() + "|" + property.getGroup() + "|" + property.getValue();
+			if (blank || !seen.add(key)) {
+				vcard.removeProperty(property);
+				changed = true;
+			}
+		}
 		return changed;
 	}
 

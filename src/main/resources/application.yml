@@ -57,6 +57,11 @@ contacts-cleaner:
     remove-invalid-phone-numbers: "${CONTACTS_CLEANER_REMOVE_INVALID_PHONE_NUMBERS:false}"
     # Drop fax numbers (TEL;TYPE=FAX, work and home) — it is not 1995.
     remove-fax-numbers: "${CONTACTS_CLEANER_REMOVE_FAX_NUMBERS:false}"
+    # Drop instant-messenger handles (ICQ, AIM, Yahoo, Skype, ...) — dead networks.
+    remove-instant-messengers: "${CONTACTS_CLEANER_REMOVE_INSTANT_MESSENGERS:true}"
+    # NOTE: Google does not expose custom fields (CSV "Custom Field") over CardDAV —
+    # this rule only reaches label debris present in the vCards. Fields like 'Age'
+    # must be cleaned once via CSV export/import at contacts.google.com.
     # Custom-field labels to delete (comma-separated, case-insensitive). 'Age' is
     # stale by definition; other candidates from old sync tools: Other Organizations.
     # Empty disables the rule. The export-analysis IT prints an inventory.
@@ -64,6 +69,9 @@ contacts-cleaner:
     # Organization names to delete (comma-separated, prefix match) — for companies
     # that no longer exist, e.g. "Acme". Empty disables the rule.
     remove-organizations: "${CONTACTS_CLEANER_REMOVE_ORGANIZATIONS:}"
+    # Keep only the primary organization; drop imported employment history
+    # (Google's "Other Organizations", served as extra ORG entries via CardDAV).
+    remove-additional-organizations: "${CONTACTS_CLEANER_REMOVE_ADDITIONAL_ORGANIZATIONS:false}"
     # Drop organizations that merely repeat the person's own name (import artifact).
     remove-self-organizations: "${CONTACTS_CLEANER_REMOVE_SELF_ORGANIZATIONS:true}"
     # Drop job titles when the contact has no organization (incl. titles orphaned
