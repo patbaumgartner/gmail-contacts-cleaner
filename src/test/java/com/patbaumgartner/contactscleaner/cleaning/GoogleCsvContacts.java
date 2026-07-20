@@ -65,7 +65,10 @@ final class GoogleCsvContacts {
 			for (String number : multiValues(row.get("Phone " + i + " - Value"))) {
 				ezvcard.property.Telephone telephone = new ezvcard.property.Telephone(number);
 				if (label.toLowerCase(java.util.Locale.ROOT).contains("fax")) {
-					telephone.getTypes().add(ezvcard.parameter.TelephoneType.FAX);
+					// Emulate Google's custom-label representation (grouped X-ABLabel).
+					String group = "itemp" + i;
+					telephone.setGroup(group);
+					vcard.addExtendedProperty("X-ABLabel", label).setGroup(group);
 				}
 				vcard.addTelephoneNumber(telephone);
 			}
