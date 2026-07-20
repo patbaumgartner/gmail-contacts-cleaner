@@ -72,6 +72,48 @@ class NameRepairRuleTests {
 		assertThat(this.rule.apply(unknown)).isFalse();
 	}
 
+	// ── Quoted names ──────────────────────────────────────────────────────────
+
+	@Test
+	void stripsWrappingQuotesFromNames() {
+		VCard vcard = new VCard();
+		StructuredName name = new StructuredName();
+		name.setGiven("\"Jane\"");
+		name.setFamily("Doe");
+		vcard.setStructuredName(name);
+		vcard.setFormattedName(new FormattedName("\"Jane Doe\""));
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Jane Doe");
+		assertThat(vcard.getStructuredName().getGiven()).isEqualTo("Jane");
+	}
+
+	@Test
+	void stripsTypographicQuotesToo() {
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new FormattedName("\u201cJane Doe\u201d"));
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Jane Doe");
+	}
+
+	@Test
+	void innerNicknameQuotesAreKept() {
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new FormattedName("Patrick \"Pat\" Miller"));
+
+		assertThat(this.rule.apply(vcard)).isFalse();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Patrick \"Pat\" Miller");
+	}
+
+	@Test
+	void quoteOnlyNamesAreNotEmptied() {
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new FormattedName("\"\""));
+
+		assertThat(this.rule.apply(vcard)).isFalse();
+	}
+
 	// ── "Last, First" display names ───────────────────────────────────────────
 
 	@Test
