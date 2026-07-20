@@ -81,8 +81,8 @@ class OrganizationCanonicalizerTests {
 	@Test
 	void disabledViaProperty() {
 		var disabled = new OrganizationCanonicalizer(new CleaningProperties(true, "", true, false, false, true, true,
-				true, false, true, true, true, true, true, true, true, true, true, true, true, java.util.List.of("Age"),
-				java.util.List.of(), true, true, false, false, 2, false, false));
+				true, false, true, true, true, true, true, true, true, true, true, true, true, true,
+				java.util.List.of("Age"), java.util.List.of(), true, true, false, false, 2, false, false));
 		VCard first = contactAt("Namics AG");
 		VCard second = contactAt("namics ag");
 

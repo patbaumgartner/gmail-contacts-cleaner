@@ -6,11 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Name repair (`repair-names`, on by default): ALL-CAPS names get smart casing
+  (`McDonald`/`O'Brien`/`van der` aware), known prefixes are canonicalized
+  (`Dr` → `Dr.`), e-mail addresses stuck in name fields are moved to e-mails
+- Label normalization extended to phone labels (`Mobil` → CELL, fax labels →
+  FAX type, unknown labels like `WhatsApp`/`Old` → default type)
+
 ## [1.0.0] - 2026-07-20
 
-Initial release — the spiritual successor of
-[gcontacts-cleaner](https://github.com/patbaumgartner/gcontacts-cleaner) (2011),
-rebuilt for today's Google.
+Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for today's Google.
 
 ### Added
 

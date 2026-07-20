@@ -9,6 +9,7 @@ import java.util.Set;
 import ezvcard.VCard;
 import ezvcard.parameter.AddressType;
 import ezvcard.parameter.EmailType;
+import ezvcard.parameter.TelephoneType;
 import ezvcard.property.Address;
 import ezvcard.property.Email;
 import ezvcard.property.RawProperty;
@@ -16,8 +17,8 @@ import ezvcard.property.Url;
 import ezvcard.property.VCardProperty;
 
 /**
- * Normalizes custom labels on e-mail addresses and postal addresses to the standard vCard
- * types. Decades of imports leave Apple-style label debris like
+ * Normalizes custom labels on e-mail addresses, phone numbers and postal addresses to the
+ * standard vCard types. Decades of imports leave Apple-style label debris like
  * {@code X-ABLabel:Internet email}, {@code Obsolete} or localized labels
  * ({@code Geschäftlich}, {@code Sonstige}) that no client renders sensibly.
  *
@@ -36,6 +37,8 @@ final class LabelNormalizationRule implements VCardCleaningRule {
 			"geschaeftlich", "arbeit", "business");
 
 	private static final Set<String> HOME_LABELS = Set.of("home", "privat", "private", "zuhause");
+
+	private static final Set<String> MOBILE_LABELS = Set.of("mobile", "mobil", "cell", "handy", "natel", "work mobile");
 
 	@Override
 	public boolean apply(VCard vcard) {
@@ -72,6 +75,34 @@ final class LabelNormalizationRule implements VCardCleaningRule {
 					address.getTypes().add(AddressType.HOME);
 				}
 				address.setGroup(null);
+				consumedLabels.add(label);
+				changed = true;
+			}
+		}
+
+		for (ezvcard.property.Telephone telephone : vcard.getTelephoneNumbers()) {
+			RawProperty label = labelsByGroup.get(telephone.getGroup());
+			if (label != null) {
+				String normalized = normalize(label.getValue());
+				if (normalized.contains("fax")) {
+					// Preserve the semantics as the standard FAX type so the (later)
+					// fax-removal rule still recognizes the number.
+					telephone.getTypes().add(TelephoneType.FAX);
+					if (WORK_LABELS.stream().anyMatch(normalized::contains)) {
+						telephone.getTypes().add(TelephoneType.WORK);
+					}
+				}
+				else if (MOBILE_LABELS.contains(normalized)) {
+					telephone.getTypes().add(TelephoneType.CELL);
+				}
+				else if (WORK_LABELS.contains(normalized)) {
+					telephone.getTypes().add(TelephoneType.WORK);
+				}
+				else if (HOME_LABELS.contains(normalized)) {
+					telephone.getTypes().add(TelephoneType.HOME);
+				}
+				// Unknown labels ('WhatsApp', 'Old', 'Conference') → default type.
+				telephone.setGroup(null);
 				consumedLabels.add(label);
 				changed = true;
 			}

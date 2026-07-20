@@ -103,16 +103,46 @@ class LabelNormalizationRuleTests {
 	}
 
 	@Test
-	void leavesLabelsOfOtherPropertiesAlone() {
+	void dropsUnknownPhoneLabelsForTheDefaultType() {
 		VCard vcard = new VCard();
 		ezvcard.property.Telephone telephone = new ezvcard.property.Telephone("+41446681800");
 		telephone.setGroup("item3");
 		vcard.addTelephoneNumber(telephone);
-		RawProperty label = vcard.addExtendedProperty("X-ABLabel", "Assistant");
-		label.setGroup("item3");
+		vcard.addExtendedProperty("X-ABLabel", "WhatsApp").setGroup("item3");
 
-		assertThat(this.rule.apply(vcard)).isFalse();
-		assertThat(vcard.getExtendedProperties()).hasSize(1);
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getTelephoneNumbers().getFirst().getTypes()).isEmpty();
+		assertThat(vcard.getExtendedProperties()).isEmpty();
+	}
+
+	@Test
+	void mapsMobilePhoneLabelsToTheCellType() {
+		VCard vcard = new VCard();
+		ezvcard.property.Telephone telephone = new ezvcard.property.Telephone("+41791234567");
+		telephone.setGroup("item7");
+		vcard.addTelephoneNumber(telephone);
+		vcard.addExtendedProperty("X-ABLabel", "Mobil").setGroup("item7");
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getTelephoneNumbers().getFirst().getTypes())
+			.containsExactly(ezvcard.parameter.TelephoneType.CELL);
+	}
+
+	@Test
+	void faxLabelsBecomeTheFaxTypeSoTheFaxRuleStillCatchesThem() {
+		VCard vcard = new VCard();
+		ezvcard.property.Telephone telephone = new ezvcard.property.Telephone("+41446681801");
+		telephone.setGroup("item8");
+		vcard.addTelephoneNumber(telephone);
+		vcard.addExtendedProperty("X-ABLabel", "Work Fax").setGroup("item8");
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getTelephoneNumbers().getFirst().getTypes()).contains(ezvcard.parameter.TelephoneType.FAX,
+				ezvcard.parameter.TelephoneType.WORK);
+
+		// The fax rule now recognizes it by type.
+		assertThat(new FaxNumberRemovalRule().apply(vcard)).isTrue();
+		assertThat(vcard.getTelephoneNumbers()).isEmpty();
 	}
 
 	@Test

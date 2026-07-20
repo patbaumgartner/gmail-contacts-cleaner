@@ -84,6 +84,9 @@ contacts-cleaner:
     trim-names: "${CONTACTS_CLEANER_TRIM_NAMES:true}"
     # Drop parenthesized name suffixes like '(JIRA)' — messenger import junk.
     remove-junk-name-suffixes: "${CONTACTS_CLEANER_REMOVE_JUNK_NAME_SUFFIXES:true}"
+    # Repair broken names: ALL-CAPS -> smart casing, 'Dr' -> 'Dr.', e-mail
+    # addresses stuck in name fields are moved to the contact's e-mails.
+    repair-names: "${CONTACTS_CLEANER_REPAIR_NAMES:true}"
     # Replace custom e-mail/address labels with standard vCard types: work/home
     # variants (incl. German) become TYPE=WORK/HOME, other custom labels
     # ('Internet email', 'Obsolete', ...) are dropped for the default type.
