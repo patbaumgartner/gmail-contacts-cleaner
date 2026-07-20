@@ -47,6 +47,10 @@ contacts-cleaner:
     # numbers like "044 668 18 00". Empty = separator stripping only.
     phone-region: "${CONTACTS_CLEANER_PHONE_REGION:}"
     remove-duplicate-phone-numbers: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_PHONE_NUMBERS:true}"
+    # Drop numbers that are provably invalid for their country (wrong length,
+    # undialable fragments like '*133#' or '12 9001') — judged via libphonenumber.
+    # National numbers are only judged when phone-region is set.
+    remove-invalid-phone-numbers: "${CONTACTS_CLEANER_REMOVE_INVALID_PHONE_NUMBERS:false}"
     normalize-email-addresses: "${CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES:true}"
     remove-duplicate-email-addresses: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES:true}"
     # Drop e-mail addresses that are not syntactically valid (missing @, no TLD).

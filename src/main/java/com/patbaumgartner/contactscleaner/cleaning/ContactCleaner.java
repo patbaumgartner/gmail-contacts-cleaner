@@ -42,6 +42,9 @@ public class ContactCleaner {
 		if (properties.normalizePhoneNumbers()) {
 			rules.add(new PhoneNumberNormalizationRule(properties.phoneRegion()));
 		}
+		if (properties.removeInvalidPhoneNumbers()) {
+			rules.add(new InvalidPhoneNumberRemovalRule(properties.phoneRegion()));
+		}
 		if (properties.removeDuplicatePhoneNumbers()) {
 			rules.add(new DuplicatePhoneNumberRemovalRule());
 		}

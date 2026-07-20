@@ -72,6 +72,7 @@ class GoogleCsvExportAnalysisIT {
 		rules.put("NameTrimmingRule", NameTrimmingRule::new);
 		rules.put("PhoneNumberNormalizationRule (CH)", () -> new PhoneNumberNormalizationRule("CH"));
 		rules.put("DuplicatePhoneNumberRemovalRule", DuplicatePhoneNumberRemovalRule::new);
+		rules.put("InvalidPhoneNumberRemovalRule (CH, opt-in)", () -> new InvalidPhoneNumberRemovalRule("CH"));
 		rules.put("EmailNormalizationRule", EmailNormalizationRule::new);
 		rules.put("InvalidEmailRemovalRule", InvalidEmailRemovalRule::new);
 		rules.put("DuplicateEmailRemovalRule", DuplicateEmailRemovalRule::new);
@@ -168,8 +169,8 @@ class GoogleCsvExportAnalysisIT {
 
 	/** What would the opt-in shared-office-number removal do? */
 	private void sharedNumberReport(List<VCard> contacts) {
-		CleaningProperties enabled = new CleaningProperties(true, "CH", true, true, true, true, false, true, true, true,
-				false, true, true, true, true, 2, false, false);
+		CleaningProperties enabled = new CleaningProperties(true, "CH", true, false, true, true, true, false, true,
+				true, true, false, true, true, true, true, 2, false, false);
 		var changed = new SharedPhoneNumberRemover(enabled).removeSharedNumbers(contacts);
 		section("SHARED PHONE NUMBERS (opt-in remove-shared-phone-numbers, default threshold 2): %d contacts affected"
 			.formatted(changed.size()));
