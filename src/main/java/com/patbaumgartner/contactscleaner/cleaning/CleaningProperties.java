@@ -64,7 +64,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		@DefaultValue("true") boolean removeEmptyProperties, @DefaultValue("true") boolean detectDuplicateContacts,
 		@DefaultValue("true") boolean extractBirthdays, @DefaultValue("true") boolean removeSocialNetworkNotes,
 		@DefaultValue("true") boolean cleanUrls, @DefaultValue("false") boolean removeSharedPhoneNumbers,
-		@DefaultValue("3") int sharedPhoneNumberThreshold, @DefaultValue("false") boolean removeNotes,
+		@DefaultValue("2") int sharedPhoneNumberThreshold, @DefaultValue("false") boolean removeNotes,
 		@DefaultValue("false") boolean deleteEmptyContacts) {
 
 	/**
@@ -74,7 +74,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 */
 	public static CleaningProperties defaults() {
 		return new CleaningProperties(true, "", true, true, true, true, false, true, true, true, true, true, true,
-				false, 3, false, false);
+				false, 2, false, false);
 	}
 
 	/**

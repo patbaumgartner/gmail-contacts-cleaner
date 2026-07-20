@@ -119,9 +119,9 @@ class GoogleCsvExportAnalysisIT {
 	/** What would the opt-in shared-office-number removal do? */
 	private void sharedNumberReport(List<VCard> contacts) {
 		CleaningProperties enabled = new CleaningProperties(true, "CH", true, true, true, true, false, true, true, true,
-				true, true, true, true, 3, false, false);
+				true, true, true, true, 2, false, false);
 		var changed = new SharedPhoneNumberRemover(enabled).removeSharedNumbers(contacts);
-		section("SHARED OFFICE NUMBERS (opt-in remove-shared-phone-numbers, threshold 3): %d contacts affected"
+		section("SHARED PHONE NUMBERS (opt-in remove-shared-phone-numbers, default threshold 2): %d contacts affected"
 			.formatted(changed.size()));
 	}
 
