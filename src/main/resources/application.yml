@@ -47,6 +47,10 @@ contacts-cleaner:
     # numbers like "044 668 18 00". Empty = separator stripping only.
     phone-region: "${CONTACTS_CLEANER_PHONE_REGION:}"
     remove-duplicate-phone-numbers: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_PHONE_NUMBERS:true}"
+    # Verify mobile vs landline against the numbering plan: provably mobile
+    # numbers gain TYPE=CELL, provably fixed-line numbers lose a wrong one.
+    # Ambiguous plans (e.g. US) are never judged.
+    correct-phone-types: "${CONTACTS_CLEANER_CORRECT_PHONE_TYPES:true}"
     # Drop numbers that are provably invalid for their country (wrong length,
     # undialable fragments like '*133#' or '12 9001') — judged via libphonenumber.
     # National numbers are only judged when phone-region is set.

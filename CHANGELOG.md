@@ -11,6 +11,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Name repair (`repair-names`, on by default): ALL-CAPS names get smart casing
   (`McDonald`/`O'Brien`/`van der` aware), known prefixes are canonicalized
   (`Dr` → `Dr.`), e-mail addresses stuck in name fields are moved to e-mails
+- Phone type correction (`correct-phone-types`, on by default): mobile/landline
+  classification verified against the numbering plan via libphonenumber
 - Label normalization extended to phone labels (`Mobil` → CELL, fax labels →
   FAX type, unknown labels like `WhatsApp`/`Old` → default type)
 

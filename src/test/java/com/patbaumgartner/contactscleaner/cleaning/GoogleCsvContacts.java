@@ -73,6 +73,16 @@ final class GoogleCsvContacts {
 			String label = row.getOrDefault("Phone " + i + " - Label", "");
 			for (String number : multiValues(row.get("Phone " + i + " - Value"))) {
 				ezvcard.property.Telephone telephone = new ezvcard.property.Telephone(number);
+				String lowerLabel = label.toLowerCase(java.util.Locale.ROOT).replace("* ", "");
+				if (lowerLabel.contains("mobile") || lowerLabel.equals("mobil")) {
+					telephone.getTypes().add(ezvcard.parameter.TelephoneType.CELL);
+				}
+				else if (lowerLabel.equals("work")) {
+					telephone.getTypes().add(ezvcard.parameter.TelephoneType.WORK);
+				}
+				else if (lowerLabel.equals("home")) {
+					telephone.getTypes().add(ezvcard.parameter.TelephoneType.HOME);
+				}
 				if (label.toLowerCase(java.util.Locale.ROOT).contains("fax")) {
 					// Emulate Google's custom-label representation (grouped X-ABLabel).
 					String group = "itemp" + i;

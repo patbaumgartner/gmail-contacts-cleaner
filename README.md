@@ -94,6 +94,7 @@ Safety first:
 | Phone number normalization | `0041 44-668.18 00` → `+41446681800` | ✅ on |
 | E.164 formatting (with `phone-region`) | `044 668 18 00` → `+41446681800` (via [libphonenumber](https://github.com/google/libphonenumber)) | ✅ when region set |
 | Duplicate phone number removal | `+41446681800`, `0041446681800` → one entry | ✅ on |
+| Phone type correction | `079…` labeled "Work" → gains `CELL`; landline wrongly marked mobile → fixed (ambiguous plans untouched) | ✅ on |
 | E-mail normalization | ` Jane.Doe@GMAIL.com ` → `jane.doe@gmail.com` | ✅ on |
 | Duplicate e-mail removal | keeps the first occurrence | ✅ on |
 | Name trimming | `" Jane  Doe "` → `"Jane Doe"` | ✅ on |
@@ -254,6 +255,7 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_NORMALIZE_PHONE_NUMBERS` | `true` | Strip separators, `00` → `+` |
 | `CONTACTS_CLEANER_PHONE_REGION` | _(empty)_ | ISO country (e.g. `CH`) — enables E.164 formatting of national numbers |
 | `CONTACTS_CLEANER_REMOVE_DUPLICATE_PHONE_NUMBERS` | `true` | Deduplicate per contact |
+| `CONTACTS_CLEANER_CORRECT_PHONE_TYPES` | `true` | Verify mobile/landline type against the numbering plan |
 | `CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES` | `true` | Lower-case + trim |
 | `CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES` | `true` | Deduplicate per contact |
 | `CONTACTS_CLEANER_TRIM_NAMES` | `true` | Trim name whitespace |
