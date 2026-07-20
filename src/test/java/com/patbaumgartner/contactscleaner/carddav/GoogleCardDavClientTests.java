@@ -44,12 +44,33 @@ class GoogleCardDavClientTests {
 	}
 
 	@Test
-	void fetchesContactsViaAddressbookQueryReport() {
+	void fetchesContactsViaPropfindAndMultiget() {
 		this.server.expect(requestTo("/carddav/v1/principals/jane.doe@gmail.com/lists/default/"))
-			.andExpect(method(HttpMethod.valueOf("REPORT")))
+			.andExpect(method(HttpMethod.valueOf("PROPFIND")))
 			.andExpect(header("Depth", "1"))
 			.andExpect(header("Authorization", org.hamcrest.Matchers.startsWith(BASIC_AUTH_PREFIX)))
-			.andExpect(content().string(org.hamcrest.Matchers.containsString("addressbook-query")))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("getetag")))
+			.andRespond(withStatus(HttpStatus.MULTI_STATUS).contentType(MediaType.APPLICATION_XML).body("""
+					<?xml version="1.0" encoding="UTF-8"?>
+					<d:multistatus xmlns:d="DAV:">
+					  <d:response>
+					    <d:href>/carddav/v1/principals/jane.doe%40gmail.com/lists/default/</d:href>
+					    <d:propstat><d:status>HTTP/1.1 200 OK</d:status><d:prop/></d:propstat>
+					  </d:response>
+					  <d:response>
+					    <d:href>/carddav/v1/principals/jane.doe%40gmail.com/lists/default/abc123</d:href>
+					    <d:propstat>
+					      <d:status>HTTP/1.1 200 OK</d:status>
+					      <d:prop><d:getetag>"etag-1"</d:getetag></d:prop>
+					    </d:propstat>
+					  </d:response>
+					</d:multistatus>
+					"""));
+		this.server.expect(requestTo("/carddav/v1/principals/jane.doe@gmail.com/lists/default/"))
+			.andExpect(method(HttpMethod.valueOf("REPORT")))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("addressbook-multiget")))
+			.andExpect(content().string(org.hamcrest.Matchers
+				.containsString("<d:href>/carddav/v1/principals/jane.doe%40gmail.com/lists/default/abc123</d:href>")))
 			.andRespond(withStatus(HttpStatus.MULTI_STATUS).contentType(MediaType.APPLICATION_XML).body("""
 					<?xml version="1.0" encoding="UTF-8"?>
 					<d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">
@@ -73,6 +94,24 @@ class GoogleCardDavClientTests {
 
 		assertThat(entries).hasSize(1);
 		assertThat(entries.getFirst().etag()).isEqualTo("\"etag-1\"");
+		this.server.verify();
+	}
+
+	@Test
+	void emptyAddressBookNeedsNoMultiget() {
+		this.server.expect(requestTo("/carddav/v1/principals/jane.doe@gmail.com/lists/default/"))
+			.andExpect(method(HttpMethod.valueOf("PROPFIND")))
+			.andRespond(withStatus(HttpStatus.MULTI_STATUS).contentType(MediaType.APPLICATION_XML).body("""
+					<?xml version="1.0" encoding="UTF-8"?>
+					<d:multistatus xmlns:d="DAV:">
+					  <d:response>
+					    <d:href>/carddav/v1/principals/jane.doe%40gmail.com/lists/default/</d:href>
+					    <d:propstat><d:status>HTTP/1.1 200 OK</d:status><d:prop/></d:propstat>
+					  </d:response>
+					</d:multistatus>
+					"""));
+
+		assertThat(this.client.fetchAllContacts(ACCOUNT)).isEmpty();
 		this.server.verify();
 	}
 
