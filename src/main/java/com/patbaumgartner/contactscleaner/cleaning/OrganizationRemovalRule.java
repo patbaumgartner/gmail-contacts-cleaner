@@ -16,10 +16,10 @@ import ezvcard.property.Organization;
  *
  * <p>
  * Matching is case-insensitive on the organization's name prefix, so a configured
- * {@code Acme} also matches {@code Acme AG} and {@code Acme (a Merkle
- * company)}, but not {@code Acmesson Consulting} (the prefix must end at a word
- * boundary). Configure via {@code contacts-cleaner.cleaning.remove-organizations}
- * (default: empty — nothing is removed until you name names).
+ * {@code Acme} also matches {@code Acme AG} and {@code Acme (a Merkle company)}, but not
+ * {@code Acmesson Consulting} (the prefix must end at a word boundary). Configure via
+ * {@code contacts-cleaner.cleaning.remove-organizations} (default: empty — nothing is
+ * removed until you name names).
  */
 final class OrganizationRemovalRule implements VCardCleaningRule {
 

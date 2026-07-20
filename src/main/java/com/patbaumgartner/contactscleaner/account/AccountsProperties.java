@@ -11,15 +11,8 @@ import org.springframework.validation.annotation.Validated;
  * Multi-account configuration bound from {@code contacts-cleaner.accounts}.
  *
  * <p>
- * Example {@code application.yml}: <pre>{@code
- * contacts-cleaner:
- *   accounts:
- *     - name: personal
- *       email: jane.doe@gmail.com
- *       app-password: "abcd efgh ijkl mnop"
- *     - name: work
- *       email: jane@example.com
- *       app-password: "qrst uvwx yzab cdef"
+ * Example {@code application.yml}:
+ * <pre>{@code contacts-cleaner: accounts: - name: personal email: jane.doe@gmail.com app-password: "abcd efgh ijkl mnop" - name: work email: jane@example.com app-password: "qrst uvwx yzab cdef"
  *       dry-run: true
  * }</pre>
  *

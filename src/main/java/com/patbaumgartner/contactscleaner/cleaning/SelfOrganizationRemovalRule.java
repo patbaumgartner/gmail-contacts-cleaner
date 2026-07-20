@@ -7,9 +7,9 @@ import ezvcard.VCard;
 import ezvcard.property.Organization;
 
 /**
- * Removes organizations that merely repeat the person's own name ({@code FN: Jane
- * Doe} with {@code ORG: Jane Doe}) — a classic import artifact where a sync tool copied
- * the display name into the company field. Carries zero information and makes every such
+ * Removes organizations that merely repeat the person's own name ({@code FN: Jane Doe}
+ * with {@code ORG: Jane Doe}) — a classic import artifact where a sync tool copied the
+ * display name into the company field. Carries zero information and makes every such
  * contact look self-employed.
  */
 final class SelfOrganizationRemovalRule implements VCardCleaningRule {
