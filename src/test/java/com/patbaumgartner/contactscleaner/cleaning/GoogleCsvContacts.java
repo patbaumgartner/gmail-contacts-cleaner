@@ -44,6 +44,12 @@ final class GoogleCsvContacts {
 		if (!row.getOrDefault("Middle Name", "").isBlank()) {
 			name.getAdditionalNames().add(row.get("Middle Name"));
 		}
+		if (!row.getOrDefault("Name Suffix", "").isBlank()) {
+			name.getSuffixes().add(row.get("Name Suffix"));
+		}
+		if (!row.getOrDefault("Name Prefix", "").isBlank()) {
+			name.getPrefixes().add(row.get("Name Prefix"));
+		}
 		vcard.setStructuredName(name);
 		String formatted = (row.getOrDefault("First Name", "") + " " + row.getOrDefault("Middle Name", "") + " "
 				+ row.getOrDefault("Last Name", ""))
