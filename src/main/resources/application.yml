@@ -6,7 +6,6 @@ spring:
     name: contacts-cleaner
   config:
     import:
-      - "optional:file:../.env[.properties]"
       - "optional:file:.env[.properties]"
   main:
     web-application-type: none
@@ -56,6 +55,12 @@ contacts-cleaner:
     # Report-only: log contact pairs that look like duplicates of each other.
     # Nothing is merged or deleted automatically.
     detect-duplicate-contacts: "${CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS:true}"
+    # Promote "Geburtstag: 12.03.1980"-style notes to a proper BDAY property.
+    # Never overwrites an existing birthday, never modifies the note.
+    extract-birthdays: "${CONTACTS_CLEANER_EXTRACT_BIRTHDAYS:true}"
+    # Strip machine-generated XING/LinkedIn sync lines from notes
+    # (profile URLs, "Created via LinkedIn"). User-written text is preserved.
+    remove-social-network-notes: "${CONTACTS_CLEANER_REMOVE_SOCIAL_NETWORK_NOTES:true}"
     remove-notes: "${CONTACTS_CLEANER_REMOVE_NOTES:false}"
     delete-empty-contacts: "${CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS:false}"
 

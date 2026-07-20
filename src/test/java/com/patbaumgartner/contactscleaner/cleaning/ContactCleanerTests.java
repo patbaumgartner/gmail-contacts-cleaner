@@ -76,8 +76,8 @@ class ContactCleanerTests {
 
 	@Test
 	void disabledRulesAreNotApplied() {
-		ContactCleaner cleaner = new ContactCleaner(
-				new CleaningProperties(false, "", false, false, false, false, false, false, false, false));
+		ContactCleaner cleaner = new ContactCleaner(new CleaningProperties(false, "", false, false, false, false, false,
+				false, false, false, false, false));
 		VCard vcard = new VCard();
 		vcard.addTelephoneNumber(new Telephone("+41 44 668 18 00"));
 		vcard.addEmail(new Email("Jane.Doe@GMAIL.com"));

@@ -27,9 +27,6 @@ jobs:
     name: Build & Publish Native Image
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    defaults:
-      run:
-        working-directory: contacts-cleaner
 
     steps:
       - name: Checkout
@@ -39,7 +36,6 @@ jobs:
 
       - name: Determine version
         id: version
-        working-directory: .
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION="${{ github.event.inputs.version }}"
@@ -89,7 +85,6 @@ jobs:
 
       - name: Tag native image as latest
         if: steps.version.outputs.prerelease == 'false'
-        working-directory: .
         run: |
           docker buildx imagetools create \
             --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/contacts-cleaner:latest \
