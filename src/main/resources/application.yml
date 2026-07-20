@@ -66,10 +66,10 @@ contacts-cleaner:
     # Strip machine-generated XING/LinkedIn sync lines from notes
     # (profile URLs, "Created via LinkedIn"). User-written text is preserved.
     remove-social-network-notes: "${CONTACTS_CLEANER_REMOVE_SOCIAL_NETWORK_NOTES:true}"
-    # Remove phone numbers appearing on N or more contacts — company switchboards,
-    # not direct lines. Threshold 3 keeps a landline shared by a couple.
+    # Remove phone numbers appearing on N or more contacts — switchboards and shared
+    # household lines, not direct numbers. Raise to 3 to keep couples' landlines.
     remove-shared-phone-numbers: "${CONTACTS_CLEANER_REMOVE_SHARED_PHONE_NUMBERS:false}"
-    shared-phone-number-threshold: "${CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD:3}"
+    shared-phone-number-threshold: "${CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD:2}"
     remove-notes: "${CONTACTS_CLEANER_REMOVE_NOTES:false}"
     # Delete contacts carrying no information at all: no phone, no e-mail, no
     # birthday, no address, no URL, no note, no organization.

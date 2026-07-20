@@ -41,7 +41,20 @@ class SharedPhoneNumberRemoverTests {
 	}
 
 	@Test
-	void keepsNumbersBelowTheThreshold() {
+	void defaultThresholdRemovesLandlinesSharedByTwoContacts() {
+		var remover = new SharedPhoneNumberRemover(enabled(2));
+		VCard wife = contact("Jane Doe", "+41446681800", "+41791111111");
+		VCard husband = contact("John Doe", "+41446681800");
+
+		var changed = remover.removeSharedNumbers(List.of(wife, husband));
+
+		assertThat(changed).containsExactlyInAnyOrder(wife, husband);
+		assertThat(wife.getTelephoneNumbers()).extracting(Telephone::getText).containsExactly("+41791111111");
+		assertThat(husband.getTelephoneNumbers()).isEmpty();
+	}
+
+	@Test
+	void raisedThresholdKeepsCoupleLandlines() {
 		var remover = new SharedPhoneNumberRemover(enabled(3));
 		VCard wife = contact("Jane Doe", "+41446681800");
 		VCard husband = contact("John Doe", "+41446681800");

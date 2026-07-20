@@ -104,7 +104,7 @@ Safety first:
 | Dead-service URL removal | Klout, Gravatar, Google+, Picasa, FriendFeed links dropped; URLs trimmed + deduplicated | ✅ on |
 | Invalid e-mail removal | `franz@`, `+41791234567` in the e-mail field → dropped (can never receive mail) | ✅ on |
 | E-mail domain verification | DNS lookup: domain gone (NXDOMAIN) → address dropped; timeouts never count | ⛔ opt-in |
-| Shared office number removal | number on ≥ 3 contacts = switchboard → dropped, direct lines kept | ⛔ opt-in |
+| Shared phone number removal | number on ≥ 2 contacts = switchboard/household line → dropped, direct lines kept | ⛔ opt-in |
 | Note removal | deletes free-text notes | ⛔ opt-in |
 | Empty contact deletion | no phone, e-mail, birthday, address, URL, note **or** org → delete | ⛔ opt-in |
 
@@ -252,7 +252,7 @@ using property syntax — see the bottom of `.env.example`.
 | `CONTACTS_CLEANER_REMOVE_INVALID_EMAILS` | `true` | Drop syntactically broken e-mail addresses |
 | `CONTACTS_CLEANER_VERIFY_EMAIL_DOMAINS` | `false` | ⚠️ DNS check — drop addresses of dead domains |
 | `CONTACTS_CLEANER_REMOVE_SHARED_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop switchboard numbers |
-| `CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD` | `3` | Contacts sharing a number before it counts as switchboard |
+| `CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD` | `2` | Contacts sharing a number before it is removed (3 keeps couples' landlines) |
 | `CONTACTS_CLEANER_REMOVE_NOTES` | `false` | ⚠️ Destructive — delete notes |
 | `CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS` | `false` | ⚠️ Destructive — delete contacts without any information |
 
