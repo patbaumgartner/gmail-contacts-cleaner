@@ -82,13 +82,13 @@ class NameRepairRuleTests {
 		assertThat(this.rule.apply(vcard)).isTrue();
 		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Max Muster");
 		// Empty structured name is populated from the parts.
-		assertThat(vcard.getStructuredName().getGiven()).isEqualTo("Patrick");
+		assertThat(vcard.getStructuredName().getGiven()).isEqualTo("Max");
 		assertThat(vcard.getStructuredName().getFamily()).isEqualTo("Muster");
 	}
 
 	@Test
 	void commaFormAgreeingWithTheStructuredNameIsRepaired() {
-		VCard vcard = named("Patrick", "Muster");
+		VCard vcard = named("Max", "Muster");
 		vcard.setFormattedName(new FormattedName("Muster, Max"));
 
 		assertThat(this.rule.apply(vcard)).isTrue();
@@ -97,8 +97,8 @@ class NameRepairRuleTests {
 
 	@Test
 	void structuredNameContradictionPreventsTheFlip() {
-		// N says given=Muster family=Patrick — ambiguous, do not touch.
-		VCard vcard = named("Muster", "Patrick");
+		// N says given=Muster family=Max — ambiguous, do not touch.
+		VCard vcard = named("Muster", "Max");
 		vcard.setFormattedName(new FormattedName("Muster, Max"));
 
 		assertThat(this.rule.apply(vcard)).isFalse();

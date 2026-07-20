@@ -75,8 +75,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param cleanUrls remove website URLs of dead/unwanted services (Klout, Google+,
  * Gravatar, XING, ...), trim and deduplicate the remaining ones
  * @param removeOrganizations organization names to delete (case-insensitive prefix match
- * with word boundary, so {@code Acme} also matches {@code Acme AG}) — for companies
- * that no longer exist; empty by default
+ * with word boundary, so {@code Acme} also matches {@code Acme AG}) — for companies that
+ * no longer exist; empty by default
  * @param removeInstantMessengers drop instant-messenger handles ({@code IMPP}: ICQ, AIM,
  * Yahoo, Skype, ...) — dead networks Google's UI no longer shows
  * @param removeCustomFields labels of custom fields to delete (case-insensitive, matched
@@ -95,8 +95,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param removeDanglingTitles drop job titles when the contact has no organization
  * (including titles orphaned by organization removal)
  * @param canonicalizeOrganizations cross-contact: rewrite organization spellings to the
- * most frequent variant per company ({@code acme AG} → {@code Acme AG}); folds
- * legal-form variants of the same brand — disable if you track subsidiaries
+ * most frequent variant per company ({@code acme AG} → {@code Acme AG}); folds legal-form
+ * variants of the same brand — disable if you track subsidiaries
  * @param removeSharedPhoneNumbers remove phone numbers that appear on
  * {@link #sharedPhoneNumberThreshold()} or more contacts — those are company
  * switchboards, not direct lines (<strong>destructive</strong>, off by default)

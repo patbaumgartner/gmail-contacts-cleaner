@@ -30,7 +30,7 @@ class OrganizationRemovalRuleTests {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "Acmesson Consulting", "ACME Corp", "Not Acme" })
+	@ValueSource(strings = { "Acmesson Consulting", "Globex Corp", "Not Acme" })
 	void keepsOtherOrganizations(String organization) {
 		VCard vcard = contactAt(organization);
 
