@@ -116,6 +116,80 @@ class GoogleCardDavClientTests {
 	}
 
 	@Test
+	void bisectsMultigetBatchesOnServerErrors() {
+		String propfind = """
+				<?xml version="1.0" encoding="UTF-8"?>
+				<d:multistatus xmlns:d="DAV:">
+				  <d:response>
+				    <d:href>/x/a</d:href>
+				    <d:propstat><d:status>HTTP/1.1 200 OK</d:status>
+				      <d:prop><d:getetag>"ea"</d:getetag></d:prop></d:propstat>
+				  </d:response>
+				  <d:response>
+				    <d:href>/x/b</d:href>
+				    <d:propstat><d:status>HTTP/1.1 200 OK</d:status>
+				      <d:prop><d:getetag>"eb"</d:getetag></d:prop></d:propstat>
+				  </d:response>
+				</d:multistatus>
+				""";
+		String cardOf = """
+				<?xml version="1.0" encoding="UTF-8"?>
+				<d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">
+				  <d:response>
+				    <d:href>%s</d:href>
+				    <d:propstat>
+				      <d:status>HTTP/1.1 200 OK</d:status>
+				      <d:prop><d:getetag>"%s"</d:getetag><card:address-data>BEGIN:VCARD
+				VERSION:3.0
+				FN:%s
+				END:VCARD</card:address-data></d:prop>
+				    </d:propstat>
+				  </d:response>
+				</d:multistatus>
+				""";
+		this.server.expect(method(HttpMethod.valueOf("PROPFIND")))
+			.andRespond(withStatus(HttpStatus.MULTI_STATUS).contentType(MediaType.APPLICATION_XML).body(propfind));
+		// batch of two fails with 500 ...
+		this.server.expect(method(HttpMethod.valueOf("REPORT")))
+			.andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+		// ... then each half succeeds individually
+		this.server.expect(method(HttpMethod.valueOf("REPORT")))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("<d:href>/x/a</d:href>")))
+			.andRespond(withStatus(HttpStatus.MULTI_STATUS).contentType(MediaType.APPLICATION_XML)
+				.body(cardOf.formatted("/x/a", "ea", "A")));
+		this.server.expect(method(HttpMethod.valueOf("REPORT")))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("<d:href>/x/b</d:href>")))
+			.andRespond(withStatus(HttpStatus.MULTI_STATUS).contentType(MediaType.APPLICATION_XML)
+				.body(cardOf.formatted("/x/b", "eb", "B")));
+
+		List<AddressBookEntry> entries = this.client.fetchAllContacts(ACCOUNT);
+
+		assertThat(entries).hasSize(2);
+		this.server.verify();
+	}
+
+	@Test
+	void skipsSingleContactsTheServerCannotDeliver() {
+		String propfind = """
+				<?xml version="1.0" encoding="UTF-8"?>
+				<d:multistatus xmlns:d="DAV:">
+				  <d:response>
+				    <d:href>/x/poison</d:href>
+				    <d:propstat><d:status>HTTP/1.1 200 OK</d:status>
+				      <d:prop><d:getetag>"ep"</d:getetag></d:prop></d:propstat>
+				  </d:response>
+				</d:multistatus>
+				""";
+		this.server.expect(method(HttpMethod.valueOf("PROPFIND")))
+			.andRespond(withStatus(HttpStatus.MULTI_STATUS).contentType(MediaType.APPLICATION_XML).body(propfind));
+		this.server.expect(method(HttpMethod.valueOf("REPORT")))
+			.andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+
+		assertThat(this.client.fetchAllContacts(ACCOUNT)).isEmpty();
+		this.server.verify();
+	}
+
+	@Test
 	void updatesContactWithEtagGuard() {
 		this.server.expect(requestTo("/carddav/v1/principals/jane.doe%40gmail.com/lists/default/abc123"))
 			.andExpect(method(HttpMethod.PUT))
