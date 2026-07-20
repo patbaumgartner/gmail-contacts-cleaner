@@ -77,6 +77,9 @@ public class ContactCleaner {
 		if (properties.cleanUrls()) {
 			rules.add(new UrlCleanupRule());
 		}
+		if (!properties.removeCustomFields().isEmpty()) {
+			rules.add(new CustomFieldRemovalRule(properties.removeCustomFields()));
+		}
 		if (properties.removeNotes()) {
 			rules.add(new NoteRemovalRule());
 		}

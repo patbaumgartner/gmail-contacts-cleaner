@@ -1,5 +1,7 @@
 package com.patbaumgartner.contactscleaner.cleaning;
 
+import java.util.List;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -50,8 +52,12 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * (profile URLs, {@code "Created via LinkedIn"}, LinkedIn import
  * {@code Position:}/{@code Connected on} blocks) from notes; user-written text in the
  * same note is preserved
- * @param cleanUrls remove website URLs of dead/aggregator services (Klout, Google+,
- * Gravatar, ...), trim and deduplicate the remaining ones
+ * @param cleanUrls remove website URLs of dead/unwanted services (Klout, Google+,
+ * Gravatar, XING, ...), trim and deduplicate the remaining ones
+ * @param removeCustomFields labels of custom fields to delete (case-insensitive, matched
+ * against Apple-style {@code X-ABLabel} groups and {@code X-<label>} properties);
+ * defaults to {@code Age} — a never-updated age is misinformation. Empty list disables
+ * the rule
  * @param removeSharedPhoneNumbers remove phone numbers that appear on
  * {@link #sharedPhoneNumberThreshold()} or more contacts — those are company
  * switchboards, not direct lines (<strong>destructive</strong>, off by default)
@@ -74,8 +80,13 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		@DefaultValue("true") boolean removeEmptyProperties, @DefaultValue("true") boolean detectDuplicateContacts,
 		@DefaultValue("true") boolean repairFlippedNames, @DefaultValue("true") boolean extractBirthdays,
 		@DefaultValue("true") boolean removeSocialNetworkNotes, @DefaultValue("true") boolean cleanUrls,
-		@DefaultValue("false") boolean removeSharedPhoneNumbers, @DefaultValue("2") int sharedPhoneNumberThreshold,
-		@DefaultValue("false") boolean removeNotes, @DefaultValue("false") boolean deleteEmptyContacts) {
+		@DefaultValue("Age") List<String> removeCustomFields, @DefaultValue("false") boolean removeSharedPhoneNumbers,
+		@DefaultValue("2") int sharedPhoneNumberThreshold, @DefaultValue("false") boolean removeNotes,
+		@DefaultValue("false") boolean deleteEmptyContacts) {
+
+	public CleaningProperties {
+		removeCustomFields = (removeCustomFields != null) ? List.copyOf(removeCustomFields) : List.of();
+	}
 
 	/**
 	 * Returns conservative defaults, mainly for tests and programmatic use: all
@@ -84,7 +95,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 */
 	public static CleaningProperties defaults() {
 		return new CleaningProperties(true, "", true, false, false, true, true, true, false, true, true, true, true,
-				true, true, true, false, 2, false, false);
+				true, true, true, List.of("Age"), false, 2, false, false);
 	}
 
 	/**
@@ -96,7 +107,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers, removeFaxNumbers,
 				removeInvalidPhoneNumbers, normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails,
 				verifyEmailDomains, trimNames, removeEmptyProperties, detectDuplicateContacts, repairFlippedNames,
-				extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeSharedPhoneNumbers,
+				extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeCustomFields, removeSharedPhoneNumbers,
 				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts);
 	}
 
@@ -110,7 +121,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers, removeFaxNumbers,
 				removeInvalidPhoneNumbers, normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails,
 				verifyEmailDomains, trimNames, removeEmptyProperties, detectDuplicateContacts, repairFlippedNames,
-				extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeSharedPhoneNumbers,
+				extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeCustomFields, removeSharedPhoneNumbers,
 				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts);
 	}
 }

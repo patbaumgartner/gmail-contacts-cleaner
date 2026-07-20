@@ -16,7 +16,8 @@ class UrlCleanupRuleTests {
 	@ValueSource(strings = { "http://klout.com/janedoe", "https://secure.gravatar.com/avatar/abc123",
 			"https://plus.google.com/1234567890", "http://profiles.google.com/jane.doe",
 			"http://www.google.com/profiles/jane.doe", "https://picasaweb.google.com/jane.doe",
-			"http://picasaweb.google.ch/jane.doe", "http://friendfeed.com/janedoe" })
+			"http://picasaweb.google.ch/jane.doe", "http://friendfeed.com/janedoe",
+			"https://www.xing.com/profile/Jane_Doe" })
 	void removesDeadAndAggregatorServiceUrls(String url) {
 		VCard vcard = new VCard();
 		vcard.addUrl(url);
@@ -26,8 +27,8 @@ class UrlCleanupRuleTests {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "https://www.linkedin.com/in/janedoe", "https://www.xing.com/profile/Jane_Doe",
-			"https://twitter.com/janedoe", "https://janedoe.example.com", "https://github.com/janedoe" })
+	@ValueSource(strings = { "https://www.linkedin.com/in/janedoe", "https://twitter.com/janedoe",
+			"https://janedoe.example.com", "https://github.com/janedoe" })
 	void keepsLivingNetworksAndPersonalSites(String url) {
 		VCard vcard = new VCard();
 		vcard.addUrl(url);

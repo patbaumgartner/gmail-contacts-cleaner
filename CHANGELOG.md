@@ -10,6 +10,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Opt-in fax number removal (`remove-fax-numbers`): drops `TEL;TYPE=FAX` entries
   (work and home)
+- Custom-field removal by label (`remove-custom-fields`, default `Age`): deletes
+  Apple-style `X-ABLabel` groups and `X-<label>` properties
+- XING profile URLs added to the URL cleanup (sync-app spam)
+- Export analysis prints a custom-field label inventory
 - Validated GraalVM native image build (libphonenumber resource hints)
 
 ## [1.0.0] - 2026-07-20

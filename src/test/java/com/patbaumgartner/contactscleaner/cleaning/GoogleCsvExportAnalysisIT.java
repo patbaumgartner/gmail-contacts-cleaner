@@ -56,6 +56,7 @@ class GoogleCsvExportAnalysisIT {
 		List<String> diffs = fullCleanWithDiffs(contacts, properties);
 		duplicateReport(contacts, properties);
 		sharedNumberReport(contacts);
+		customFieldInventory(contacts);
 		residualDirtScan(contacts);
 		writeHtmlReport(properties);
 
@@ -80,6 +81,7 @@ class GoogleCsvExportAnalysisIT {
 		rules.put("BirthdayExtractionRule", BirthdayExtractionRule::new);
 		rules.put("SocialNetworkNoteRemovalRule", SocialNetworkNoteRemovalRule::new);
 		rules.put("UrlCleanupRule", UrlCleanupRule::new);
+		rules.put("CustomFieldRemovalRule (Age)", () -> new CustomFieldRemovalRule(java.util.List.of("Age")));
 
 		List<VCard> contacts = GoogleCsvContacts.read(EXPORT);
 		for (Map.Entry<String, Supplier<VCardCleaningRule>> entry : rules.entrySet()) {
@@ -157,10 +159,26 @@ class GoogleCsvExportAnalysisIT {
 	/** What would the opt-in shared-office-number removal do? */
 	private void sharedNumberReport(List<VCard> contacts) {
 		CleaningProperties enabled = new CleaningProperties(true, "CH", true, false, false, true, true, true, false,
-				true, true, true, false, true, true, true, true, 2, false, false);
+				true, true, true, false, true, true, true, java.util.List.of("Age"), true, 2, false, false);
 		var changed = new SharedPhoneNumberRemover(enabled).removeSharedNumbers(contacts);
 		section("SHARED PHONE NUMBERS (opt-in remove-shared-phone-numbers, default threshold 2): %d contacts affected"
 			.formatted(changed.size()));
+	}
+
+	/**
+	 * Which custom-field labels exist? Feed the interesting ones to remove-custom-fields.
+	 */
+	private void customFieldInventory(List<VCard> contacts) {
+		Map<String, Integer> labels = new java.util.TreeMap<>();
+		for (VCard vcard : contacts) {
+			for (ezvcard.property.RawProperty property : vcard.getExtendedProperties()) {
+				if ("X-ABLabel".equalsIgnoreCase(property.getPropertyName()) && property.getValue() != null) {
+					labels.merge(property.getValue().trim(), 1, Integer::sum);
+				}
+			}
+		}
+		section("CUSTOM FIELD INVENTORY (configure removals via contacts-cleaner.cleaning.remove-custom-fields)");
+		labels.forEach((label, count) -> System.out.printf("  %-38s %5d%n", label, count));
 	}
 
 	/** What is still dirty after the full clean? Ideas for the next cleaning rules. */

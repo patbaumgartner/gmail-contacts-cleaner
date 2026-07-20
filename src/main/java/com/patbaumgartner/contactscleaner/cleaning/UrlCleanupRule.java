@@ -34,7 +34,8 @@ final class UrlCleanupRule implements VCardCleaningRule {
 	private static final List<Pattern> DEAD_SERVICE_PATTERNS = List.of(Pattern.compile(".*\\bklout\\.com/.*"),
 			Pattern.compile(".*\\bgravatar\\.com/.*"), Pattern.compile(".*\\bplus\\.google\\.com/.*"),
 			Pattern.compile(".*\\bprofiles\\.google\\.com/.*"), Pattern.compile(".*\\bgoogle\\.com/profiles.*"),
-			Pattern.compile(".*\\bpicasaweb\\.google\\.[a-z.]+/.*"), Pattern.compile(".*\\bfriendfeed\\.com/.*"));
+			Pattern.compile(".*\\bpicasaweb\\.google\\.[a-z.]+/.*"), Pattern.compile(".*\\bfriendfeed\\.com/.*"),
+			Pattern.compile(".*\\bxing\\.com/.*"));
 
 	@Override
 	public boolean apply(VCard vcard) {

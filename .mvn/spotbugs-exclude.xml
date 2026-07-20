@@ -25,7 +25,7 @@
        string, so Unicode case-mapping quirks are harmless. -->
   <Match>
     <Bug pattern="IMPROPER_UNICODE" />
-    <Class name="~com\.patbaumgartner\.contactscleaner\.cleaning\.(DuplicateContactDetector|FlippedNameRepairRule)" />
+    <Class name="~com\.patbaumgartner\.contactscleaner\.cleaning\.(DuplicateContactDetector|FlippedNameRepairRule|CustomFieldRemovalRule)" />
   </Match>
 
   <!-- FindSecBugs' ReDoS detector does not model possessive quantifiers (++): the

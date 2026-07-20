@@ -53,6 +53,10 @@ contacts-cleaner:
     remove-invalid-phone-numbers: "${CONTACTS_CLEANER_REMOVE_INVALID_PHONE_NUMBERS:false}"
     # Drop fax numbers (TEL;TYPE=FAX, work and home) — it is not 1995.
     remove-fax-numbers: "${CONTACTS_CLEANER_REMOVE_FAX_NUMBERS:false}"
+    # Custom-field labels to delete (comma-separated, case-insensitive). 'Age' is
+    # stale by definition; other candidates from old sync tools: Other Organizations.
+    # Empty disables the rule. The export-analysis IT prints an inventory.
+    remove-custom-fields: "${CONTACTS_CLEANER_REMOVE_CUSTOM_FIELDS:Age}"
     normalize-email-addresses: "${CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES:true}"
     remove-duplicate-email-addresses: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES:true}"
     # Drop e-mail addresses that are not syntactically valid (missing @, no TLD).
