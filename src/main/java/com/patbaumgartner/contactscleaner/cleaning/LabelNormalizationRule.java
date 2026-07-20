@@ -42,11 +42,11 @@ final class LabelNormalizationRule implements VCardCleaningRule {
 
 	@Override
 	public boolean apply(VCard vcard) {
+		boolean changed = removeGrouplessLabels(vcard);
 		Map<String, RawProperty> labelsByGroup = labelsByGroup(vcard);
 		if (labelsByGroup.isEmpty()) {
-			return false;
+			return changed;
 		}
-		boolean changed = false;
 		Set<RawProperty> consumedLabels = new HashSet<>();
 
 		for (Email email : vcard.getEmails()) {
@@ -136,6 +136,18 @@ final class LabelNormalizationRule implements VCardCleaningRule {
 		for (RawProperty label : consumedLabels) {
 			if (!groupStillInUse(vcard, label.getGroup())) {
 				vcard.removeProperty(label);
+			}
+		}
+		return changed;
+	}
+
+	/** An X-ABLabel without a group labels nothing — pure sync debris. */
+	private boolean removeGrouplessLabels(VCard vcard) {
+		boolean changed = false;
+		for (RawProperty property : java.util.List.copyOf(vcard.getExtendedProperties())) {
+			if (property.getGroup() == null && "X-ABLabel".equalsIgnoreCase(property.getPropertyName())) {
+				vcard.removeProperty(property);
+				changed = true;
 			}
 		}
 		return changed;

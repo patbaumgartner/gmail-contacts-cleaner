@@ -146,6 +146,16 @@ class LabelNormalizationRuleTests {
 	}
 
 	@Test
+	void sweepsGrouplessLabelsThatLabelNothing() {
+		VCard vcard = new VCard();
+		vcard.addExtendedProperty("X-ABLABEL", "Klout");
+		vcard.addExtendedProperty("X-ABLABEL", "Facebook");
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getExtendedProperties()).isEmpty();
+	}
+
+	@Test
 	void handlesContactsWithoutLabels() {
 		VCard vcard = new VCard();
 		vcard.addEmail(new Email("jane.doe@example.com"));

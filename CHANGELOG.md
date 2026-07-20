@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Instant-messenger removal (`remove-instant-messengers`, on by default): drops
+  IMPP handles of dead networks (ICQ, AIM, Yahoo, Skype, ...)
+- Empty-property rule also removes blank and exact-duplicate extended properties
+  (e.g. `X-GENDER:Male` repeated seven times)
+- Label normalization sweeps group-less `X-ABLabel` debris
+- Additional-organizations removal (`remove-additional-organizations`, opt-in):
+  keeps the primary organization, drops imported employment history
+- Documented CardDAV limitation: Google does not expose CSV custom fields
+  (`Age`, `Other Organizations`) to sync clients — one-time CSV cleanup required
+
 ## [1.0.0] - 2026-07-20
 
 Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for today's Google.

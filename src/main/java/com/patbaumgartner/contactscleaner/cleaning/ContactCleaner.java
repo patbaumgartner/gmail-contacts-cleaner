@@ -95,6 +95,9 @@ public class ContactCleaner {
 		if (properties.cleanUrls()) {
 			rules.add(new UrlCleanupRule());
 		}
+		if (properties.removeInstantMessengers()) {
+			rules.add(new InstantMessengerRemovalRule());
+		}
 		if (!properties.removeCustomFields().isEmpty()) {
 			rules.add(new CustomFieldRemovalRule(properties.removeCustomFields()));
 		}
@@ -103,6 +106,9 @@ public class ContactCleaner {
 		}
 		if (properties.removeSelfOrganizations()) {
 			rules.add(new SelfOrganizationRemovalRule());
+		}
+		if (properties.removeAdditionalOrganizations()) {
+			rules.add(new AdditionalOrganizationsRemovalRule());
 		}
 		// Must run after all organization rules: the decision depends on the final
 		// state (a title orphaned by organization removal is dangling too).
