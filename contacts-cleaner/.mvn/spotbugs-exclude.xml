@@ -20,4 +20,12 @@
     <Bug pattern="CRLF_INJECTION_LOGS" />
   </Match>
 
+  <!-- Locale.ROOT case-folding here builds internal comparison keys for duplicate
+       detection (report-only); no security decision is derived from the transformed
+       string, so Unicode case-mapping quirks are harmless. -->
+  <Match>
+    <Bug pattern="IMPROPER_UNICODE" />
+    <Class name="com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector" />
+  </Match>
+
 </FindBugsFilter>

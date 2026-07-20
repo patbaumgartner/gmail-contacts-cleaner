@@ -9,6 +9,7 @@ import com.patbaumgartner.contactscleaner.carddav.CardDavClient;
 import com.patbaumgartner.contactscleaner.carddav.CardDavException;
 import com.patbaumgartner.contactscleaner.cleaning.CleaningProperties;
 import com.patbaumgartner.contactscleaner.cleaning.ContactCleaner;
+import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -62,9 +63,9 @@ class ContactsCleanupServiceTests {
 
 	private ContactsCleanupService service(GoogleAccount account, boolean deleteEmptyContacts) {
 		var accounts = new AccountsProperties(List.of(account));
-		var cleaner = new ContactCleaner(
-				new CleaningProperties(true, true, true, true, true, false, deleteEmptyContacts));
-		return new ContactsCleanupService(accounts, this.cardDavClient, cleaner, this.eventPublisher);
+		var properties = CleaningProperties.defaults().withDestructiveOptions(false, deleteEmptyContacts);
+		return new ContactsCleanupService(accounts, this.cardDavClient, new ContactCleaner(properties),
+				new DuplicateContactDetector(properties), this.eventPublisher);
 	}
 
 	private static GoogleAccount account(boolean dryRun) {
@@ -142,8 +143,9 @@ class ContactsCleanupServiceTests {
 		GoogleAccount failing = new GoogleAccount("broken", "broken@gmail.com", "wrong", true, false);
 		GoogleAccount healthy = account(false);
 		var accounts = new AccountsProperties(List.of(failing, healthy));
-		var cleaner = new ContactCleaner(new CleaningProperties(true, true, true, true, true, false, false));
-		var service = new ContactsCleanupService(accounts, this.cardDavClient, cleaner, this.eventPublisher);
+		var properties = CleaningProperties.defaults();
+		var service = new ContactsCleanupService(accounts, this.cardDavClient, new ContactCleaner(properties),
+				new DuplicateContactDetector(properties), this.eventPublisher);
 
 		when(this.cardDavClient.fetchAllContacts(failing)).thenThrow(new CardDavException("401 Unauthorized"));
 		when(this.cardDavClient.fetchAllContacts(healthy)).thenReturn(List.of());
@@ -160,8 +162,9 @@ class ContactsCleanupServiceTests {
 	void skipsDisabledAccounts() {
 		GoogleAccount disabled = new GoogleAccount("disabled", "off@gmail.com", "pw", false, false);
 		var accounts = new AccountsProperties(List.of(disabled));
-		var cleaner = new ContactCleaner(new CleaningProperties(true, true, true, true, true, false, false));
-		var service = new ContactsCleanupService(accounts, this.cardDavClient, cleaner, this.eventPublisher);
+		var properties = CleaningProperties.defaults();
+		var service = new ContactsCleanupService(accounts, this.cardDavClient, new ContactCleaner(properties),
+				new DuplicateContactDetector(properties), this.eventPublisher);
 
 		assertThat(service.cleanAllAccounts()).isEmpty();
 		verify(this.cardDavClient, never()).fetchAllContacts(any());

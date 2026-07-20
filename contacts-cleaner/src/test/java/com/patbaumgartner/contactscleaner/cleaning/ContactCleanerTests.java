@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ContactCleanerTests {
 
 	private static CleaningProperties defaults() {
-		return new CleaningProperties(true, true, true, true, true, false, false);
+		return CleaningProperties.defaults();
 	}
 
 	@Test
@@ -47,14 +47,13 @@ class ContactCleanerTests {
 		ContactCleaner conservative = new ContactCleaner(defaults());
 		assertThat(conservative.clean(emptyContact).empty()).isFalse();
 
-		ContactCleaner destructive = new ContactCleaner(
-				new CleaningProperties(true, true, true, true, true, false, true));
+		ContactCleaner destructive = new ContactCleaner(defaults().withDestructiveOptions(false, true));
 		assertThat(destructive.clean(emptyContact).empty()).isTrue();
 	}
 
 	@Test
 	void contactWithOnlyAPhoneNumberIsNotEmpty() {
-		ContactCleaner cleaner = new ContactCleaner(new CleaningProperties(true, true, true, true, true, false, true));
+		ContactCleaner cleaner = new ContactCleaner(defaults().withDestructiveOptions(false, true));
 		VCard vcard = new VCard();
 		vcard.addTelephoneNumber(new Telephone("+41446681800"));
 
@@ -70,8 +69,7 @@ class ContactCleanerTests {
 		assertThat(conservative.clean(vcard).changed()).isFalse();
 		assertThat(vcard.getNotes()).hasSize(1);
 
-		ContactCleaner destructive = new ContactCleaner(
-				new CleaningProperties(true, true, true, true, true, true, false));
+		ContactCleaner destructive = new ContactCleaner(defaults().withDestructiveOptions(true, false));
 		assertThat(destructive.clean(vcard).changed()).isTrue();
 		assertThat(vcard.getNotes()).isEmpty();
 	}
@@ -79,7 +77,7 @@ class ContactCleanerTests {
 	@Test
 	void disabledRulesAreNotApplied() {
 		ContactCleaner cleaner = new ContactCleaner(
-				new CleaningProperties(false, false, false, false, false, false, false));
+				new CleaningProperties(false, "", false, false, false, false, false, false, false, false));
 		VCard vcard = new VCard();
 		vcard.addTelephoneNumber(new Telephone("+41 44 668 18 00"));
 		vcard.addEmail(new Email("Jane.Doe@GMAIL.com"));
