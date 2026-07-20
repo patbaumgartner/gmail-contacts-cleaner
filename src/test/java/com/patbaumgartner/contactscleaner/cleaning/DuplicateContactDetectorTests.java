@@ -56,8 +56,8 @@ class DuplicateContactDetectorTests {
 
 	@Test
 	void reportsFlippedNamePairsForGooglesMergeTool() {
-		List<DuplicateCandidate> candidates = detector.detect(
-				List.of(contact("Max Muster", "+41791111111", null), contact("Muster Max", "+41792222222", null)));
+		List<DuplicateCandidate> candidates = detector
+			.detect(List.of(contact("Max Muster", "+41791111111", null), contact("Muster Max", "+41792222222", null)));
 
 		assertThat(candidates).singleElement()
 			.satisfies((candidate) -> assertThat(candidate.reason()).contains("different word order"));

@@ -18,8 +18,7 @@ import org.springframework.stereotype.Component;
 /**
  * Cross-contact pass: canonicalizes organization name spellings. Years of manual entry
  * leave the same employer in half a dozen variants — {@code Acme}, {@code Acme AG},
- * {@code acme AG}, {@code Acme GmbH} — which breaks searching and grouping by
- * company.
+ * {@code acme AG}, {@code Acme GmbH} — which breaks searching and grouping by company.
  *
  * <p>
  * Organizations are grouped by a normalized key (lower-cased, punctuation and legal

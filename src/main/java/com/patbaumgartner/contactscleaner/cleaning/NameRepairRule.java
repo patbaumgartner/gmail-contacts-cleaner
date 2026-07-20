@@ -54,9 +54,9 @@ final class NameRepairRule implements VCardCleaningRule {
 	// ── "Last, First" display names ───────────────────────────────────────────
 
 	/**
-	 * {@code "Muster, Max"} → {@code "Max Muster"}. Applies only to the
-	 * unambiguous single-comma form with two non-empty parts; anything fancier (multiple
-	 * commas, suffix notation) is left alone.
+	 * {@code "Muster, Max"} → {@code "Max Muster"}. Applies only to the unambiguous
+	 * single-comma form with two non-empty parts; anything fancier (multiple commas,
+	 * suffix notation) is left alone.
 	 */
 	private boolean repairCommaFormattedDisplayName(VCard vcard) {
 		FormattedName formatted = vcard.getFormattedName();
