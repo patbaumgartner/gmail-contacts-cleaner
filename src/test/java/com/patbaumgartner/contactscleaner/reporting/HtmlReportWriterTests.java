@@ -22,11 +22,11 @@ class HtmlReportWriterTests {
 	private CleanupRunCompleted event() {
 		var change = new ContactChange("Jane <Doe>", ContactChange.Type.UPDATED, List.of("TEL 0041 44 668 18 00"),
 				List.of("TEL +41446681800"));
-		var merge = new ContactChange("Girba Tudor", ContactChange.Type.MERGED, List.of("TEL +41765790423"),
-				List.of("merged into 'Tudor Girba'"));
+		var deletion = new ContactChange("Ghost Contact", ContactChange.Type.DELETED, List.of("FN Ghost Contact"),
+				List.of());
 		var result = new AccountCleanupResult("personal", true, 42, 1, 0,
-				List.of(new DuplicateCandidate("A", "B", "shared phone number +417912345678")), List.of(change, merge),
-				true, 1234, "Cleanup completed");
+				List.of(new DuplicateCandidate("A", "B", "shared phone number +417912345678")),
+				List.of(change, deletion), true, 1234, "Cleanup completed");
 		return new CleanupRunCompleted(Instant.parse("2026-07-20T02:00:00Z"), List.of(result));
 	}
 
@@ -46,7 +46,7 @@ class HtmlReportWriterTests {
 		assertThat(html).contains("DRY RUN")
 			.contains("personal")
 			.contains("TEL +41446681800")
-			.contains("merged into &#39;Tudor Girba&#39;".replace("&#39;", "'"))
+			.contains("Ghost Contact")
 			.contains("shared phone number +417912345678")
 			// HTML injection from contact data must be escaped
 			.contains("Jane &lt;Doe&gt;")

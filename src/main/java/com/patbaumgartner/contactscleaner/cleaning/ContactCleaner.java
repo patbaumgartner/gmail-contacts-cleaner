@@ -39,6 +39,12 @@ public class ContactCleaner {
 		if (properties.trimNames()) {
 			rules.add(new NameTrimmingRule());
 		}
+		// Runs after e-mail normalization would be ideal, but the rule normalizes
+		// e-mail local parts itself; placed here so repaired names flow into all
+		// later reporting.
+		if (properties.repairFlippedNames()) {
+			rules.add(new FlippedNameRepairRule());
+		}
 		if (properties.normalizePhoneNumbers()) {
 			rules.add(new PhoneNumberNormalizationRule(properties.phoneRegion()));
 		}

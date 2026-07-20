@@ -138,7 +138,6 @@ public class HtmlReportWriter {
 		return switch (type) {
 			case UPDATED -> "<span class=\"chip upd\">updated</span> ";
 			case DELETED -> "<span class=\"chip del\">deleted</span> ";
-			case MERGED -> "<span class=\"chip mrg\">merged</span> ";
 		};
 	}
 

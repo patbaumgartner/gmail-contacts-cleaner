@@ -25,15 +25,7 @@
        string, so Unicode case-mapping quirks are harmless. -->
   <Match>
     <Bug pattern="IMPROPER_UNICODE" />
-    <Class name="~com\.patbaumgartner\.contactscleaner\.cleaning\.(DuplicateContactDetector|DuplicateContactMerger)" />
-  </Match>
-
-  <!-- DuplicateContactMerger.Merge deliberately exposes the primary VCard: callers
-       (orchestration) must mutate and persist exactly that shared card instance —
-       a defensive copy would defeat the purpose. -->
-  <Match>
-    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
-    <Class name="com.patbaumgartner.contactscleaner.cleaning.DuplicateContactMerger$Merge" />
+    <Class name="~com\.patbaumgartner\.contactscleaner\.cleaning\.(DuplicateContactDetector|FlippedNameRepairRule)" />
   </Match>
 
   <!-- FindSecBugs' ReDoS detector does not model possessive quantifiers (++): the

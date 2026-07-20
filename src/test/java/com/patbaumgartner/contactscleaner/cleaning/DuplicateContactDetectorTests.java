@@ -55,6 +55,23 @@ class DuplicateContactDetectorTests {
 	}
 
 	@Test
+	void reportsFlippedNamePairsForGooglesMergeTool() {
+		List<DuplicateCandidate> candidates = detector.detect(
+				List.of(contact("Tudor Girba", "+41791111111", null), contact("Girba Tudor", "+41792222222", null)));
+
+		assertThat(candidates).singleElement()
+			.satisfies((candidate) -> assertThat(candidate.reason()).contains("different word order"));
+	}
+
+	@Test
+	void handlesNamesWithRepeatedTokens() {
+		List<DuplicateCandidate> candidates = detector.detect(
+				List.of(contact("Yassine Yassine", "+41791111111", null), contact("Max Muster", "+41792222222", null)));
+
+		assertThat(candidates).isEmpty();
+	}
+
+	@Test
 	void reportsEachPairOnlyOnce() {
 		List<DuplicateCandidate> candidates = detector
 			.detect(List.of(contact("Jane Doe", "+41446681800", "jane.doe@gmail.com"),
