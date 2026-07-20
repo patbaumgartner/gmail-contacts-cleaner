@@ -56,13 +56,24 @@ contacts-cleaner:
     # Custom-field labels to delete (comma-separated, case-insensitive). 'Age' is
     # stale by definition; other candidates from old sync tools: Other Organizations.
     # Empty disables the rule. The export-analysis IT prints an inventory.
-    remove-custom-fields: "${CONTACTS_CLEANER_REMOVE_CUSTOM_FIELDS:Age}"
+    remove-custom-fields: "${CONTACTS_CLEANER_REMOVE_CUSTOM_FIELDS:Age,Photo}"
     # Organization names to delete (comma-separated, prefix match) — for companies
     # that no longer exist, e.g. "Acme". Empty disables the rule.
     remove-organizations: "${CONTACTS_CLEANER_REMOVE_ORGANIZATIONS:}"
+    # Drop organizations that merely repeat the person's own name (import artifact).
+    remove-self-organizations: "${CONTACTS_CLEANER_REMOVE_SELF_ORGANIZATIONS:true}"
+    # Drop job titles when the contact has no organization (incl. titles orphaned
+    # by organization removal).
+    remove-dangling-titles: "${CONTACTS_CLEANER_REMOVE_DANGLING_TITLES:true}"
+    # Cross-contact: rewrite organization spellings to the most frequent variant
+    # per company ('acme AG' -> 'Acme AG'). Folds legal-form variants of the
+    # same brand; disable if you track subsidiaries separately.
+    canonicalize-organizations: "${CONTACTS_CLEANER_CANONICALIZE_ORGANIZATIONS:true}"
     # Drop postal addresses that are a less complete copy of another address on the
     # same contact (all filled components equal) — the richer one survives.
     remove-redundant-addresses: "${CONTACTS_CLEANER_REMOVE_REDUNDANT_ADDRESSES:true}"
+    # Drop addresses consisting of nothing but geo coordinates (check-in debris).
+    remove-geo-coordinate-addresses: "${CONTACTS_CLEANER_REMOVE_GEO_COORDINATE_ADDRESSES:true}"
     normalize-email-addresses: "${CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES:true}"
     remove-duplicate-email-addresses: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES:true}"
     # Drop e-mail addresses that are not syntactically valid (missing @, no TLD).

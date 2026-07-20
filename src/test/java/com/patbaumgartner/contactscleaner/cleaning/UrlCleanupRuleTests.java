@@ -55,6 +55,17 @@ class UrlCleanupRuleTests {
 	}
 
 	@Test
+	void deduplicatesSchemeWwwAndTrailingSlashVariants() {
+		VCard vcard = new VCard();
+		vcard.addUrl("http://www.example.com/jane/");
+		vcard.addUrl("https://example.com/jane");
+		vcard.addUrl("https://www.example.com/jane");
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getUrls()).extracting(Url::getValue).containsExactly("http://www.example.com/jane/");
+	}
+
+	@Test
 	void handlesContactsWithoutUrls() {
 		assertThat(this.rule.apply(new VCard())).isFalse();
 	}
