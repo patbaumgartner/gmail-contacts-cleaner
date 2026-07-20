@@ -48,6 +48,11 @@ contacts-cleaner:
     remove-duplicate-phone-numbers: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_PHONE_NUMBERS:true}"
     normalize-email-addresses: "${CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES:true}"
     remove-duplicate-email-addresses: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES:true}"
+    # Drop e-mail addresses that are not syntactically valid (missing @, no TLD).
+    remove-invalid-emails: "${CONTACTS_CLEANER_REMOVE_INVALID_EMAILS:true}"
+    # Resolve mail domains via DNS and drop addresses whose domain no longer exists
+    # (authoritative NXDOMAIN only — DNS timeouts never count). Needs network access.
+    verify-email-domains: "${CONTACTS_CLEANER_VERIFY_EMAIL_DOMAINS:false}"
     trim-names: "${CONTACTS_CLEANER_TRIM_NAMES:true}"
     # Drop properties whose value is entirely blank (empty TEL/EMAIL/URL/NOTE,
     # all-blank ORG/ADR) — sync debris, considered non-destructive.
@@ -61,7 +66,13 @@ contacts-cleaner:
     # Strip machine-generated XING/LinkedIn sync lines from notes
     # (profile URLs, "Created via LinkedIn"). User-written text is preserved.
     remove-social-network-notes: "${CONTACTS_CLEANER_REMOVE_SOCIAL_NETWORK_NOTES:true}"
+    # Remove phone numbers appearing on N or more contacts — company switchboards,
+    # not direct lines. Threshold 3 keeps a landline shared by a couple.
+    remove-shared-phone-numbers: "${CONTACTS_CLEANER_REMOVE_SHARED_PHONE_NUMBERS:false}"
+    shared-phone-number-threshold: "${CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD:3}"
     remove-notes: "${CONTACTS_CLEANER_REMOVE_NOTES:false}"
+    # Delete contacts carrying no information at all: no phone, no e-mail, no
+    # birthday, no address, no URL, no note, no organization.
     delete-empty-contacts: "${CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS:false}"
 
   # Accounts are configured via environment variables (relaxed binding) or a local

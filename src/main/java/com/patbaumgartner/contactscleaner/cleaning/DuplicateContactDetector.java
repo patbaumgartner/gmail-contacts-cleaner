@@ -59,19 +59,33 @@ public class DuplicateContactDetector {
 		return List.copyOf(candidates);
 	}
 
+	/**
+	 * Values shared by more than this many contacts are ignored: a phone number on three
+	 * or more cards is almost certainly a company switchboard (and an e-mail address a
+	 * mailing list), not a duplicated person.
+	 */
+	static final int MAX_OWNERS_FOR_DUPLICATE = 2;
+
 	/** Index phone numbers and e-mail addresses; contacts sharing a value match. */
 	private void detectSharedValues(List<VCard> vcards, List<DuplicateCandidate> candidates, Set<PairKey> reported) {
-		Map<String, Integer> firstOwnerByValue = new HashMap<>();
+		Map<String, List<Integer>> ownersByValue = new HashMap<>();
 		for (int i = 0; i < vcards.size(); i++) {
 			for (String value : sharedValueKeys(vcards.get(i))) {
-				Integer owner = firstOwnerByValue.putIfAbsent(value, i);
-				if (owner != null && owner != i && reported.add(new PairKey(owner, i))) {
-					candidates.add(new DuplicateCandidate(displayName(vcards.get(owner)), displayName(vcards.get(i)),
-							"shared " + (value.startsWith("tel:") ? "phone number " : "e-mail address ")
-									+ value.substring(4)));
-				}
+				ownersByValue.computeIfAbsent(value, (key) -> new ArrayList<>()).add(i);
 			}
 		}
+		ownersByValue.forEach((value, owners) -> {
+			if (owners.size() != MAX_OWNERS_FOR_DUPLICATE) {
+				return;
+			}
+			int first = owners.get(0);
+			int second = owners.get(1);
+			if (first != second && reported.add(new PairKey(first, second))) {
+				candidates.add(new DuplicateCandidate(displayName(vcards.get(first)), displayName(vcards.get(second)),
+						"shared " + (value.startsWith("tel:") ? "phone number " : "e-mail address ")
+								+ value.substring(4)));
+			}
+		});
 	}
 
 	private void detectSimilarNames(List<VCard> vcards, List<DuplicateCandidate> candidates, Set<PairKey> reported) {

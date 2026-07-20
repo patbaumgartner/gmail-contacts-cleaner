@@ -60,7 +60,10 @@ final class PhoneNumberNormalizationRule implements VCardCleaningRule {
 		if (phoneNumber == null) {
 			return null;
 		}
-		String stripped = phoneNumber.replaceAll("[\\s\\-./()]", "").trim();
+		// Also strip invisible Unicode format characters (bidi marks U+202A/U+202C,
+		// zero-width spaces) that phones copied from messengers often carry.
+		String stripped = phoneNumber.replaceAll("[\\s\\-./()]|\\p{Cf}", "").trim();
+		stripped = stripped.replaceFirst("^\\++", "+");
 		if (stripped.startsWith("00")) {
 			stripped = "+" + stripped.substring(2);
 		}

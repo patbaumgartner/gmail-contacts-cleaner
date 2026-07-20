@@ -39,6 +39,13 @@ class PhoneNumberE164Tests {
 	}
 
 	@Test
+	void stripsInvisibleUnicodeFormatCharactersAndDoublePlus() {
+		// U+202A (LTR embedding) and U+202C (pop direction) — WhatsApp copy-paste debris
+		assertThat(this.swissRule.normalize("\u202a+41 78 710 52 71\u202c")).isEqualTo("+41787105271");
+		assertThat(this.swissRule.normalize("++41 27 474 60 31")).isEqualTo("+41274746031");
+	}
+
+	@Test
 	void lowerCaseRegionIsAccepted() {
 		var rule = new PhoneNumberNormalizationRule("ch");
 		assertThat(rule.normalize("044 668 18 00")).isEqualTo("+41446681800");

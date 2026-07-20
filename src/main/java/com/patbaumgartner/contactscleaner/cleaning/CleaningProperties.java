@@ -21,6 +21,12 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param removeDuplicatePhoneNumbers drop repeated phone numbers within one contact
  * @param normalizeEmailAddresses lower-case and trim e-mail addresses
  * @param removeDuplicateEmailAddresses drop repeated e-mail addresses within one contact
+ * @param removeInvalidEmails drop e-mail addresses that are not syntactically valid
+ * (missing {@code @}, no domain, illegal characters) — import accidents that can never
+ * receive mail
+ * @param verifyEmailDomains resolve each mail domain via DNS and remove addresses whose
+ * domain authoritatively no longer exists (NXDOMAIN); DNS timeouts never count as proof
+ * (<strong>destructive</strong> and requires network access, off by default)
  * @param trimNames trim whitespace around given/family/middle/formatted names
  * @param removeEmptyProperties drop properties whose value is entirely blank (empty
  * {@code TEL}/{@code EMAIL}/{@code URL}/{@code NOTE}, all-blank {@code ORG}/{@code ADR})
@@ -31,22 +37,35 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param extractBirthdays promote a keyword-tagged birthday found in the notes (e.g.
  * {@code "Geburtstag: 12.03.1980"}) to a proper {@code BDAY} property; never overwrites
  * an existing birthday, never modifies the note
- * @param removeSocialNetworkNotes strip machine-generated XING/LinkedIn sync lines
- * (profile URLs, {@code "Created via LinkedIn"}) from notes; user-written text in the
+ * @param removeSocialNetworkNotes strip machine-generated XING/LinkedIn sync content
+ * (profile URLs, {@code "Created via LinkedIn"}, LinkedIn import
+ * {@code Position:}/{@code Connected on} blocks) from notes; user-written text in the
  * same note is preserved
+ * @param cleanUrls remove website URLs of dead/aggregator services (Klout, Google+,
+ * Gravatar, ...), trim and deduplicate the remaining ones
+ * @param removeSharedPhoneNumbers remove phone numbers that appear on
+ * {@link #sharedPhoneNumberThreshold()} or more contacts — those are company
+ * switchboards, not direct lines (<strong>destructive</strong>, off by default)
+ * @param sharedPhoneNumberThreshold minimum number of contacts sharing a phone number
+ * before it is considered an office line (default {@code 3}, so a landline shared by a
+ * couple survives)
  * @param removeNotes delete the free-text notes field of every contact
  * (<strong>destructive</strong>, off by default)
- * @param deleteEmptyContacts delete contacts that have neither a phone number nor an
- * e-mail address (<strong>destructive</strong>, off by default)
+ * @param deleteEmptyContacts delete contacts that carry no information at all — no phone,
+ * no e-mail, no birthday, no address, no URL, no note, no organization
+ * (<strong>destructive</strong>, off by default)
  */
 @ConfigurationProperties(prefix = "contacts-cleaner.cleaning")
 public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNumbers,
 		@DefaultValue("") String phoneRegion, @DefaultValue("true") boolean removeDuplicatePhoneNumbers,
 		@DefaultValue("true") boolean normalizeEmailAddresses,
-		@DefaultValue("true") boolean removeDuplicateEmailAddresses, @DefaultValue("true") boolean trimNames,
+		@DefaultValue("true") boolean removeDuplicateEmailAddresses, @DefaultValue("true") boolean removeInvalidEmails,
+		@DefaultValue("false") boolean verifyEmailDomains, @DefaultValue("true") boolean trimNames,
 		@DefaultValue("true") boolean removeEmptyProperties, @DefaultValue("true") boolean detectDuplicateContacts,
 		@DefaultValue("true") boolean extractBirthdays, @DefaultValue("true") boolean removeSocialNetworkNotes,
-		@DefaultValue("false") boolean removeNotes, @DefaultValue("false") boolean deleteEmptyContacts) {
+		@DefaultValue("true") boolean cleanUrls, @DefaultValue("false") boolean removeSharedPhoneNumbers,
+		@DefaultValue("3") int sharedPhoneNumberThreshold, @DefaultValue("false") boolean removeNotes,
+		@DefaultValue("false") boolean deleteEmptyContacts) {
 
 	/**
 	 * Returns conservative defaults, mainly for tests and programmatic use: all
@@ -54,7 +73,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 * @return default cleaning properties
 	 */
 	public static CleaningProperties defaults() {
-		return new CleaningProperties(true, "", true, true, true, true, true, true, true, true, false, false);
+		return new CleaningProperties(true, "", true, true, true, true, false, true, true, true, true, true, true,
+				false, 3, false, false);
 	}
 
 	/**
@@ -64,8 +84,9 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 */
 	public CleaningProperties withPhoneRegion(String phoneRegion) {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				normalizeEmailAddresses, removeDuplicateEmailAddresses, trimNames, removeEmptyProperties,
-				detectDuplicateContacts, extractBirthdays, removeSocialNetworkNotes, removeNotes, deleteEmptyContacts);
+				normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains,
+				trimNames, removeEmptyProperties, detectDuplicateContacts, extractBirthdays, removeSocialNetworkNotes,
+				cleanUrls, removeSharedPhoneNumbers, sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts);
 	}
 
 	/**
@@ -76,7 +97,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	 */
 	public CleaningProperties withDestructiveOptions(boolean removeNotes, boolean deleteEmptyContacts) {
 		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				normalizeEmailAddresses, removeDuplicateEmailAddresses, trimNames, removeEmptyProperties,
-				detectDuplicateContacts, extractBirthdays, removeSocialNetworkNotes, removeNotes, deleteEmptyContacts);
+				normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains,
+				trimNames, removeEmptyProperties, detectDuplicateContacts, extractBirthdays, removeSocialNetworkNotes,
+				cleanUrls, removeSharedPhoneNumbers, sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts);
 	}
 }

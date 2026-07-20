@@ -100,9 +100,13 @@ Safety first:
 | Empty property removal | `EMAIL:`, `ORG:;;`, all-blank `ADR` → dropped | ✅ on |
 | Duplicate **contact** detection | two cards sharing a phone/e-mail or near-identical name → **reported in the log, never merged** | ✅ on (report-only) |
 | Birthday extraction | note `Geburtstag: 12.03.1980` → proper `BDAY` field (existing birthdays never overwritten) | ✅ on |
-| Social-network note removal | `XING: xing.com/profile/…`, `Created via LinkedIn` lines stripped — user text preserved | ✅ on |
+| Social-network note removal | `XING: xing.com/profile/…`, `Created via LinkedIn`, LinkedIn `Position:/Connected on` blocks stripped — user text preserved | ✅ on |
+| Dead-service URL removal | Klout, Gravatar, Google+, Picasa, FriendFeed links dropped; URLs trimmed + deduplicated | ✅ on |
+| Invalid e-mail removal | `franz@`, `+41791234567` in the e-mail field → dropped (can never receive mail) | ✅ on |
+| E-mail domain verification | DNS lookup: domain gone (NXDOMAIN) → address dropped; timeouts never count | ⛔ opt-in |
+| Shared office number removal | number on ≥ 3 contacts = switchboard → dropped, direct lines kept | ⛔ opt-in |
 | Note removal | deletes free-text notes | ⛔ opt-in |
-| Empty contact deletion | no phone **and** no e-mail → delete | ⛔ opt-in |
+| Empty contact deletion | no phone, e-mail, birthday, address, URL, note **or** org → delete | ⛔ opt-in |
 
 ---
 
@@ -245,8 +249,12 @@ using property syntax — see the bottom of `.env.example`.
 | `CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS` | `true` | Report-only: log likely duplicate contact pairs |
 | `CONTACTS_CLEANER_EXTRACT_BIRTHDAYS` | `true` | Promote keyword-tagged note birthdays to `BDAY` |
 | `CONTACTS_CLEANER_REMOVE_SOCIAL_NETWORK_NOTES` | `true` | Strip XING/LinkedIn sync lines from notes |
+| `CONTACTS_CLEANER_REMOVE_INVALID_EMAILS` | `true` | Drop syntactically broken e-mail addresses |
+| `CONTACTS_CLEANER_VERIFY_EMAIL_DOMAINS` | `false` | ⚠️ DNS check — drop addresses of dead domains |
+| `CONTACTS_CLEANER_REMOVE_SHARED_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop switchboard numbers |
+| `CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD` | `3` | Contacts sharing a number before it counts as switchboard |
 | `CONTACTS_CLEANER_REMOVE_NOTES` | `false` | ⚠️ Destructive — delete notes |
-| `CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS` | `false` | ⚠️ Destructive — delete empty contacts |
+| `CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS` | `false` | ⚠️ Destructive — delete contacts without any information |
 
 ### Scheduler (server profile only)
 

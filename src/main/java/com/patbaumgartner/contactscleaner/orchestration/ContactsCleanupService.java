@@ -2,7 +2,9 @@ package com.patbaumgartner.contactscleaner.orchestration;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.patbaumgartner.contactscleaner.account.AccountsProperties;
@@ -12,6 +14,8 @@ import com.patbaumgartner.contactscleaner.carddav.CardDavClient;
 import com.patbaumgartner.contactscleaner.cleaning.ContactCleaner;
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateCandidate;
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
+import com.patbaumgartner.contactscleaner.cleaning.EmailDomainVerifier;
+import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
 import ezvcard.Ezvcard;
 import ezvcard.VCard;
 import ezvcard.VCardVersion;
@@ -50,6 +54,10 @@ public class ContactsCleanupService {
 
 	private final DuplicateContactDetector duplicateContactDetector;
 
+	private final SharedPhoneNumberRemover sharedPhoneNumberRemover;
+
+	private final EmailDomainVerifier emailDomainVerifier;
+
 	private final ApplicationEventPublisher eventPublisher;
 
 	/** Guards against overlapping runs (e.g. a startup run during a scheduled run). */
@@ -57,11 +65,14 @@ public class ContactsCleanupService {
 
 	ContactsCleanupService(AccountsProperties accountsProperties, CardDavClient cardDavClient,
 			ContactCleaner contactCleaner, DuplicateContactDetector duplicateContactDetector,
+			SharedPhoneNumberRemover sharedPhoneNumberRemover, EmailDomainVerifier emailDomainVerifier,
 			ApplicationEventPublisher eventPublisher) {
 		this.accountsProperties = accountsProperties;
 		this.cardDavClient = cardDavClient;
 		this.contactCleaner = contactCleaner;
 		this.duplicateContactDetector = duplicateContactDetector;
+		this.sharedPhoneNumberRemover = sharedPhoneNumberRemover;
+		this.emailDomainVerifier = emailDomainVerifier;
 		this.eventPublisher = eventPublisher;
 	}
 
@@ -98,20 +109,40 @@ public class ContactsCleanupService {
 		log.info("Starting cleanup for account '{}'{}", account.name(), account.dryRun() ? " (dry run)" : "");
 		try {
 			List<AddressBookEntry> entries = cardDavClient.fetchAllContacts(account);
-			int updated = 0;
-			int deleted = 0;
-			List<VCard> survivingContacts = new ArrayList<>();
+
+			// Pass 1: parse and clean every contact individually.
+			List<AddressBookEntry> parsedEntries = new ArrayList<>();
+			List<VCard> vcards = new ArrayList<>();
+			Set<VCard> changedContacts = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
 			for (AddressBookEntry entry : entries) {
 				VCard vcard = parse(entry);
 				if (vcard == null) {
 					continue;
 				}
-				var result = contactCleaner.clean(vcard);
-				if (result.empty()) {
+				if (contactCleaner.clean(vcard).changed()) {
+					changedContacts.add(vcard);
+				}
+				parsedEntries.add(entry);
+				vcards.add(vcard);
+			}
+
+			// Pass 2: cross-contact cleanup — needs the whole address book at once.
+			changedContacts.addAll(sharedPhoneNumberRemover.removeSharedNumbers(vcards));
+			changedContacts.addAll(emailDomainVerifier.removeUndeliverableAddresses(vcards));
+
+			// Pass 3: write back. Emptiness is evaluated last so that a contact whose
+			// only phone number was a shared office line is deleted (when enabled).
+			int updated = 0;
+			int deleted = 0;
+			List<VCard> survivingContacts = new ArrayList<>();
+			for (int i = 0; i < vcards.size(); i++) {
+				VCard vcard = vcards.get(i);
+				AddressBookEntry entry = parsedEntries.get(i);
+				if (contactCleaner.isDeletableEmptyContact(vcard)) {
 					deleted += deleteContact(account, entry, vcard) ? 1 : 0;
 				}
 				else {
-					if (result.changed()) {
+					if (changedContacts.contains(vcard)) {
 						updated += updateContact(account, entry, vcard) ? 1 : 0;
 					}
 					survivingContacts.add(vcard);
