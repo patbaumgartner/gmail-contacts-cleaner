@@ -12,7 +12,14 @@ import org.springframework.stereotype.Component;
 /**
  * Resolves mail domains via DNS (JNDI DNS provider): a domain is considered deliverable
  * when it has an {@code MX} record or — per RFC 5321 fallback — an {@code A}/{@code AAAA}
- * record.
+ * record. A mail-only domain without any website therefore counts as deliverable.
+ *
+ * <p>
+ * Crucial distinction: <strong>NODATA is not NXDOMAIN</strong>. A domain that exists but
+ * has none of the queried record types (parked domain, TXT-only, split-horizon DNS,
+ * filtering resolver) yields an empty answer and maps to {@link DomainResolution#UNKNOWN}
+ * — never to non-existence. Only an authoritative name-not-found error proves the domain
+ * is gone.
  */
 @Component
 class JndiDomainResolver implements DomainResolver {
@@ -23,8 +30,12 @@ class JndiDomainResolver implements DomainResolver {
 	public DomainResolution resolve(String domain) {
 		try {
 			Attributes attributes = context().getAttributes(domain, new String[] { "MX", "A", "AAAA" });
-			return (attributes != null && attributes.size() > 0) ? DomainResolution.DELIVERABLE
-					: DomainResolution.NON_EXISTENT;
+			if (attributes != null && attributes.size() > 0) {
+				return DomainResolution.DELIVERABLE;
+			}
+			// Empty answer (NODATA): the domain exists but carries none of the
+			// queried records — inconclusive, never treat as proof of death.
+			return DomainResolution.UNKNOWN;
 		}
 		catch (NameNotFoundException ex) {
 			// Authoritative NXDOMAIN — the domain does not exist.
