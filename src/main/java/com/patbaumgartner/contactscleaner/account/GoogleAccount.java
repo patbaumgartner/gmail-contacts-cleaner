@@ -22,18 +22,26 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
  * @param oauthClientId OAuth client ID used only for Other contacts import
  * @param oauthClientSecret OAuth client secret used only for Other contacts import
  * @param oauthRefreshToken OAuth refresh token used only for Other contacts import
+ * @param preferGoogleProfilePhotos whether to prefer a Google profile photo over a
+ * contact-specific photo
  */
 public record GoogleAccount(@NotBlank String name, @NotBlank @Email String email, @NotBlank String appPassword,
 		@DefaultValue("true") boolean enabled, @DefaultValue("false") boolean dryRun,
 		@DefaultValue("false") boolean importOtherContacts, String oauthClientId, String oauthClientSecret,
-		String oauthRefreshToken) {
+		String oauthRefreshToken, @DefaultValue("false") boolean preferGoogleProfilePhotos) {
 
 	@ConstructorBinding
 	public GoogleAccount {
 	}
 
 	public GoogleAccount(String name, String email, String appPassword, boolean enabled, boolean dryRun) {
-		this(name, email, appPassword, enabled, dryRun, false, "", "", "");
+		this(name, email, appPassword, enabled, dryRun, false, "", "", "", false);
+	}
+
+	public GoogleAccount(String name, String email, String appPassword, boolean enabled, boolean dryRun,
+			boolean importOtherContacts, String oauthClientId, String oauthClientSecret, String oauthRefreshToken) {
+		this(name, email, appPassword, enabled, dryRun, importOtherContacts, oauthClientId, oauthClientSecret,
+				oauthRefreshToken, false);
 	}
 
 	/**
@@ -55,7 +63,7 @@ public record GoogleAccount(@NotBlank String name, @NotBlank @Email String email
 	@Override
 	public String toString() {
 		return "GoogleAccount[name=%s, email=%s, appPassword=****, enabled=%s, dryRun=%s, importOtherContacts=%s, "
-				+ "oauthClientId=****, oauthClientSecret=****, oauthRefreshToken=****]".formatted(name, email, enabled,
-						dryRun, importOtherContacts);
+				+ "preferGoogleProfilePhotos=%s, oauthClientId=****, oauthClientSecret=****, oauthRefreshToken=****]"
+					.formatted(name, email, enabled, dryRun, importOtherContacts, preferGoogleProfilePhotos);
 	}
 }

@@ -99,6 +99,7 @@ public class HtmlReportWriter {
 			.append(stat(result.deletedContacts(), "deleted"))
 			.append(stat(result.duplicateCandidates().size(), "duplicate candidates"))
 			.append(importStats(result))
+			.append(profilePhotoStats(result))
 			.append(stat(result.durationMs(), "ms"))
 			.append("</div>");
 
@@ -155,6 +156,17 @@ public class HtmlReportWriter {
 		return stat(importResult.promoted(), "Other Contacts promoted")
 				+ stat(importResult.skipped(), "Other Contacts skipped")
 				+ stat(importResult.failed(), "Other Contacts failed");
+	}
+
+	private String profilePhotoStats(AccountCleanupResult result) {
+		if (result.googleProfilePhotos()
+			.equals(com.patbaumgartner.contactscleaner.peopleapi.GoogleProfilePhotoResult.EMPTY)) {
+			return "";
+		}
+		var photoResult = result.googleProfilePhotos();
+		return stat(photoResult.removed(), "contact photos replaced")
+				+ stat(photoResult.skipped(), "contact photos retained")
+				+ stat(photoResult.failed(), "contact photo updates failed");
 	}
 
 	private String escape(String value) {

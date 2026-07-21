@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -18,6 +19,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 class GooglePeopleApiClientTests {
 
@@ -50,7 +52,7 @@ class GooglePeopleApiClientTests {
 				"https://people.googleapis.com/v1/otherContacts?readMask=metadata,emailAddresses,phoneNumbers&pageSize=1000"))
 			.andExpect(method(HttpMethod.GET))
 			.andExpect(header("Authorization", "Bearer access-token"))
-			.andRespond(withSuccess("{\"otherContacts\":[{\"resourceName\":\"otherContacts/one\"}],"
+			.andRespond(withSuccess("{\"totalSize\":2,\"otherContacts\":[{\"resourceName\":\"otherContacts/one\"}],"
 					+ "\"nextPageToken\":\"next-page\"}", MediaType.APPLICATION_JSON));
 		this.server
 			.expect(requestTo("https://people.googleapis.com/v1/otherContacts/one:copyOtherContactToMyContactsGroup"))
@@ -106,6 +108,72 @@ class GooglePeopleApiClientTests {
 		assertThatExceptionOfType(OtherContactsException.class)
 			.isThrownBy(() -> this.client.importOtherContacts(account))
 			.withMessageContaining("requires OAuth client ID");
+	}
+
+	@Test
+	void prefersGoogleProfilePhotosWithoutRemovingContactOnlyOrDefaultPhotos() {
+		this.server.expect(requestTo("https://oauth2.googleapis.com/token"))
+			.andRespond(withSuccess("{\"access_token\":\"access-token\"}", MediaType.APPLICATION_JSON));
+		this.server.expect(requestTo(
+				"https://people.googleapis.com/v1/people/me/connections?personFields=photos,metadata&pageSize=1000"))
+			.andExpect(header("Authorization", "Bearer access-token"))
+			.andRespond(withSuccess("{\"connections\":["
+					+ "{\"resourceName\":\"people/replace\",\"photos\":[{\"metadata\":{\"source\":{\"type\":\"CONTACT\"}}},"
+					+ "{\"metadata\":{\"source\":{\"type\":\"PROFILE\"}},\"default\":false}]},"
+					+ "{\"resourceName\":\"people/contact-only\",\"photos\":[{\"metadata\":{\"source\":{\"type\":\"CONTACT\"}}}]},"
+					+ "{\"resourceName\":\"people/default-profile\",\"photos\":[{\"metadata\":{\"source\":{\"type\":\"CONTACT\"}}},"
+					+ "{\"metadata\":{\"source\":{\"type\":\"PROFILE\"}},\"default\":true}]}]}",
+					MediaType.APPLICATION_JSON));
+		this.server.expect(requestTo("https://people.googleapis.com/v1/people/replace:deleteContactPhoto"))
+			.andExpect(method(HttpMethod.DELETE))
+			.andExpect(header("Authorization", "Bearer access-token"))
+			.andRespond(withSuccess());
+
+		GoogleProfilePhotoResult result = this.client.preferGoogleProfilePhotos(ACCOUNT);
+
+		assertThat(result).isEqualTo(new GoogleProfilePhotoResult(3, 1, 2, 0));
+		this.server.verify();
+	}
+
+	@Test
+	void treatsAnAlreadyAbsentContactPhotoAsSkipped() {
+		this.server.expect(requestTo("https://oauth2.googleapis.com/token"))
+			.andRespond(withSuccess("{\"access_token\":\"access-token\"}", MediaType.APPLICATION_JSON));
+		this.server.expect(requestTo(
+				"https://people.googleapis.com/v1/people/me/connections?personFields=photos,metadata&pageSize=1000"))
+			.andRespond(withSuccess(
+					"{\"connections\":[{\"resourceName\":\"people/no-photo\",\"photos\":["
+							+ "{\"metadata\":{\"source\":{\"type\":\"CONTACT\"}}},"
+							+ "{\"metadata\":{\"source\":{\"type\":\"PROFILE\"}},\"default\":false}]}]}",
+					MediaType.APPLICATION_JSON));
+		this.server.expect(requestTo("https://people.googleapis.com/v1/people/no-photo:deleteContactPhoto"))
+			.andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+		GoogleProfilePhotoResult result = this.client.preferGoogleProfilePhotos(ACCOUNT);
+
+		assertThat(result).isEqualTo(new GoogleProfilePhotoResult(1, 0, 1, 0));
+		this.server.verify();
+	}
+
+	@Test
+	void stopsPhotoUpdatesAfterGoogleRateLimitsTheAccount() {
+		this.server.expect(requestTo("https://oauth2.googleapis.com/token"))
+			.andRespond(withSuccess("{\"access_token\":\"access-token\"}", MediaType.APPLICATION_JSON));
+		this.server.expect(requestTo(
+				"https://people.googleapis.com/v1/people/me/connections?personFields=photos,metadata&pageSize=1000"))
+			.andRespond(withSuccess("{\"connections\":["
+					+ "{\"resourceName\":\"people/limited\",\"photos\":[{\"metadata\":{\"source\":{\"type\":\"CONTACT\"}}},"
+					+ "{\"metadata\":{\"source\":{\"type\":\"PROFILE\"}},\"default\":false}]},"
+					+ "{\"resourceName\":\"people/not-requested\",\"photos\":[{\"metadata\":{\"source\":{\"type\":\"CONTACT\"}}},"
+					+ "{\"metadata\":{\"source\":{\"type\":\"PROFILE\"}},\"default\":false}]}]}",
+					MediaType.APPLICATION_JSON));
+		this.server.expect(requestTo("https://people.googleapis.com/v1/people/limited:deleteContactPhoto"))
+			.andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+
+		GoogleProfilePhotoResult result = this.client.preferGoogleProfilePhotos(ACCOUNT);
+
+		assertThat(result).isEqualTo(new GoogleProfilePhotoResult(1, 0, 0, 1));
+		this.server.verify();
 	}
 
 }

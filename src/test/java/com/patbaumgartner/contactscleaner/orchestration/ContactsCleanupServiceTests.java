@@ -16,6 +16,8 @@ import com.patbaumgartner.contactscleaner.cleaning.OrganizationCanonicalizer;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsClient;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
+import com.patbaumgartner.contactscleaner.peopleapi.ContactPhotoClient;
+import com.patbaumgartner.contactscleaner.peopleapi.GoogleProfilePhotoResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -70,6 +72,9 @@ class ContactsCleanupServiceTests {
 	private OtherContactsClient otherContactsClient;
 
 	@Mock
+	private ContactPhotoClient contactPhotoClient;
+
+	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
 	private ContactsCleanupService service(GoogleAccount account, boolean deleteEmptyContacts) {
@@ -81,7 +86,7 @@ class ContactsCleanupServiceTests {
 	private ContactsCleanupService service(AccountsProperties accounts,
 			com.patbaumgartner.contactscleaner.cleaning.CleaningProperties properties) {
 		return new ContactsCleanupService(accounts, this.cardDavClient, this.otherContactsClient,
-				new ContactCleaner(properties), new DuplicateContactDetector(properties),
+				this.contactPhotoClient, new ContactCleaner(properties), new DuplicateContactDetector(properties),
 				new SharedPhoneNumberRemover(properties),
 				new EmailDomainVerifier(properties, (domain) -> DomainResolution.DELIVERABLE),
 				new OrganizationCanonicalizer(properties), this.eventPublisher);
@@ -180,6 +185,32 @@ class ContactsCleanupServiceTests {
 		service(account, false).cleanAllAccounts();
 
 		verify(this.otherContactsClient, never()).importOtherContacts(any(), anySet(), anySet());
+	}
+
+	@Test
+	void prefersGoogleProfilePhotosAndRefreshesTheCardDavSnapshot() {
+		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, false, false,
+				"client-id", "client-secret", "refresh-token", true);
+		when(this.contactPhotoClient.preferGoogleProfilePhotos(account))
+			.thenReturn(new GoogleProfilePhotoResult(3, 1, 2, 0));
+		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
+
+		List<AccountCleanupResult> results = service(account, false).cleanAllAccounts();
+
+		verify(this.contactPhotoClient).preferGoogleProfilePhotos(account);
+		verify(this.cardDavClient, times(2)).fetchAllContacts(account);
+		assertThat(results.getFirst().googleProfilePhotos()).isEqualTo(new GoogleProfilePhotoResult(3, 1, 2, 0));
+	}
+
+	@Test
+	void skipsGoogleProfilePhotoPreferenceDuringDryRun() {
+		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, true, false,
+				"client-id", "client-secret", "refresh-token", true);
+		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
+
+		service(account, false).cleanAllAccounts();
+
+		verify(this.contactPhotoClient, never()).preferGoogleProfilePhotos(any());
 	}
 
 	@Test
