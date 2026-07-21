@@ -140,6 +140,7 @@ final class NameRepairRule implements VCardCleaningRule {
 
 	private String sanitize(String value) {
 		String result = NAME_NOISE.matcher(value).replaceAll("");
+		result = result.replace("\\\"", "\"").replace("\\'", "'");
 		result = BOUNDARY_QUOTES.matcher(result).replaceAll("");
 		result = result.replaceAll("\\s+", " ").trim();
 		return result.isEmpty() ? value : result;
@@ -379,6 +380,9 @@ final class NameRepairRule implements VCardCleaningRule {
 	}
 
 	private String pascalCase(String value) {
+		if (value.isEmpty()) {
+			return value;
+		}
 		return value.substring(0, 1).toUpperCase(Locale.ROOT) + value.substring(1).toLowerCase(Locale.ROOT);
 	}
 

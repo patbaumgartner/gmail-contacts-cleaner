@@ -30,6 +30,7 @@ class NameRepairRuleTests {
 	@CsvSource(textBlock = """
 			JANE,      DOE,           Jane,      Doe
 			JEAN-LUC,  PICARD,        Jean-Luc,  Picard
+			JEAN--LUC, PICARD,        Jean--Luc, Picard
 			RONALD,    MCDONALD,      Ronald,    McDonald
 			SHANE,     O'BRIEN,       Shane,     O'Brien
 			JANE,      VAN DER BERG,  Jane,      van der Berg
@@ -97,6 +98,15 @@ class NameRepairRuleTests {
 
 		assertThat(this.rule.apply(vcard)).isTrue();
 		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Jane Doe");
+	}
+
+	@Test
+	void stripsEscapedWrappingQuotesFromDisplayNames() {
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new FormattedName("\\\"My Name\\\""));
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("My Name");
 	}
 
 	@Test

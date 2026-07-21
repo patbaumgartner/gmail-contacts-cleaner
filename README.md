@@ -262,9 +262,9 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `contacts-cleaner.accounts[0].enabled` | Participate in runs (default `true`) |
 | `contacts-cleaner.accounts[0].dry-run` | Compute + log changes only (default `false`, **start with `true`**) |
 | `contacts-cleaner.accounts[0].import-other-contacts` | Opt in to promote Google Other contacts before cleanup (default `false`; skipped during dry run) |
-| `contacts-cleaner.accounts[0].oauth-client-id` | OAuth client ID for this account's Other contacts import |
-| `contacts-cleaner.accounts[0].oauth-client-secret` | OAuth client secret for this account's Other contacts import; keep it only in ignored `.env` |
-| `contacts-cleaner.accounts[0].oauth-refresh-token` | Offline OAuth refresh token for this account's Other contacts import; keep it only in ignored `.env` |
+| `contacts-cleaner.accounts[0].oauth-client-id` | OAuth client ID for this account's People API features |
+| `contacts-cleaner.accounts[0].oauth-client-secret` | OAuth client secret for this account's People API features; keep it only in ignored `.env` |
+| `contacts-cleaner.accounts[0].oauth-refresh-token` | Offline OAuth refresh token for this account's People API features; keep it only in ignored `.env` |
 
 Add more accounts as `contacts-cleaner.accounts[1].*`,
 `contacts-cleaner.accounts[2].*`, … . The same `.env` works for Maven and Docker.
@@ -280,6 +280,9 @@ contacts; the second authorizes their promotion into My Contacts. Put the OAuth 
 ID, client secret, and refresh token on that account in the ignored `.env`, then set
 `import-other-contacts=true`. The importer only copies names, e-mail addresses, and
 phone numbers because those are the fields Google permits for this operation.
+
+For the complete initial authorization flow and refresh-token recovery instructions, see
+[Google OAuth 2.0 setup](docs/oauth2-setup.md).
 
 The HTML report and application logs show discovered, promoted, skipped, and failed
 counts. Skipping is based only on exact normalized e-mail addresses or phone numbers,
