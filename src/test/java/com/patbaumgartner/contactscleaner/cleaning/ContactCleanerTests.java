@@ -35,7 +35,7 @@ class ContactCleanerTests {
 		ContactCleaner cleaner = new ContactCleaner(defaults());
 		VCard vcard = new VCard();
 		vcard.addTelephoneNumber(new Telephone("+41446681800"));
-		vcard.addEmail(new Email("jane.doe@gmail.com"));
+		vcard.addEmail(new Email("contact@gmail.com"));
 
 		assertThat(cleaner.clean(vcard).changed()).isFalse();
 	}
@@ -110,6 +110,16 @@ class ContactCleanerTests {
 	}
 
 	@Test
+	void canDisableEmailNameInference() {
+		ContactCleaner cleaner = new ContactCleaner(defaults().withEmailNameInference(false));
+		VCard vcard = new VCard();
+		vcard.addEmail(new Email("jane.doe@example.com"));
+
+		assertThat(cleaner.clean(vcard).changed()).isFalse();
+		assertThat(vcard.getStructuredName()).isNull();
+	}
+
+	@Test
 	void contactWithOnlyANoteIsNotEmpty() {
 		ContactCleaner cleaner = new ContactCleaner(defaults().withDestructiveOptions(false, true));
 		VCard vcard = new VCard();
@@ -148,11 +158,11 @@ class ContactCleanerTests {
 				true, java.util.List.of("Age"), java.util.List.of(), false, true, true, true, false, 3, false, false));
 		VCard vcard = new VCard();
 		vcard.addTelephoneNumber(new Telephone("+41 44 668 18 00"));
-		vcard.addEmail(new Email("Jane.Doe@GMAIL.com"));
+		vcard.addEmail(new Email("Contact@GMAIL.com"));
 
 		assertThat(cleaner.clean(vcard).changed()).isFalse();
 		assertThat(vcard.getTelephoneNumbers().getFirst().getText()).isEqualTo("+41 44 668 18 00");
-		assertThat(vcard.getEmails().getFirst().getValue()).isEqualTo("Jane.Doe@GMAIL.com");
+		assertThat(vcard.getEmails().getFirst().getValue()).isEqualTo("Contact@GMAIL.com");
 	}
 
 }

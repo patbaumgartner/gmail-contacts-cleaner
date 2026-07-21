@@ -11,6 +11,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Name repair sanitizes every name component: boundary quotes (even one-sided
   strays, typographic variants included), emojis and invisible characters are
   removed, whitespace collapsed; inner nickname quotes are preserved
+- Missing given/family name components are inferred before normalization from an
+  unambiguous `first.last` or `first_last` e-mail local part
 
 ## [1.0.0] - 2026-07-20
 

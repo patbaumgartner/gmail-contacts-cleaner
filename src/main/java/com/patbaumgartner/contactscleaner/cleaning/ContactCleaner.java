@@ -33,6 +33,10 @@ public class ContactCleaner {
 
 	private static List<VCardCleaningRule> buildRules(CleaningProperties properties) {
 		List<VCardCleaningRule> rules = new ArrayList<>();
+		// Infer structured names before any name normalization consumes the components.
+		if (properties.inferNamesFromEmailAddresses()) {
+			rules.add(new EmailNameInferenceRule());
+		}
 		if (properties.removeEmptyProperties()) {
 			rules.add(new EmptyPropertyRemovalRule());
 		}
