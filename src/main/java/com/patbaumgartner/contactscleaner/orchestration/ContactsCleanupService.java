@@ -14,6 +14,7 @@ import com.patbaumgartner.contactscleaner.account.AccountsProperties;
 import com.patbaumgartner.contactscleaner.account.GoogleAccount;
 import com.patbaumgartner.contactscleaner.carddav.AddressBookEntry;
 import com.patbaumgartner.contactscleaner.carddav.CardDavClient;
+import com.patbaumgartner.contactscleaner.carddav.CardDavException;
 import com.patbaumgartner.contactscleaner.cleaning.ContactCleaner;
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateCandidate;
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
@@ -204,14 +205,18 @@ public class ContactsCleanupService {
 				VCard vcard = vcards.get(i);
 				AddressBookEntry entry = parsedEntries.get(i);
 				if (contactCleaner.isDeletableEmptyContact(vcard)) {
-					deleted += deleteContact(account, entry, vcard) ? 1 : 0;
-					changes.add(new ContactChange(VCardSnapshot.displayName(vcard), ContactChange.Type.DELETED,
-							snapshots.get(vcard), List.of()));
+					if (deleteContact(account, entry, vcard)) {
+						deleted++;
+						changes.add(new ContactChange(VCardSnapshot.displayName(vcard), ContactChange.Type.DELETED,
+								snapshots.get(vcard), List.of()));
+					}
 				}
 				else {
 					if (changedContacts.contains(vcard)) {
-						updated += updateContact(account, entry, vcard) ? 1 : 0;
-						changes.add(diff(vcard, snapshots.get(vcard)));
+						if (updateContact(account, entry, vcard)) {
+							updated++;
+							changes.add(diff(vcard, snapshots.get(vcard)));
+						}
 					}
 					survivingContacts.add(vcard);
 				}
@@ -372,8 +377,15 @@ public class ContactsCleanupService {
 			log.info("[dry run] Would update contact '{}' ({})", displayName(vcard), entry.href());
 			return true;
 		}
-		cardDavClient.updateContact(account, entry, Ezvcard.write(vcard).version(VCardVersion.V3_0).go());
-		return true;
+		try {
+			cardDavClient.updateContact(account, entry, Ezvcard.write(vcard).version(VCardVersion.V3_0).go());
+			return true;
+		}
+		catch (CardDavException ex) {
+			log.warn("Skipping rejected contact update '{}' ({}) for account '{}': {}", displayName(vcard),
+					entry.href(), account.name(), ex.getMessage());
+			return false;
+		}
 	}
 
 	private boolean deleteContact(GoogleAccount account, AddressBookEntry entry, VCard vcard) {
@@ -381,8 +393,15 @@ public class ContactsCleanupService {
 			log.info("[dry run] Would delete empty contact '{}' ({})", displayName(vcard), entry.href());
 			return true;
 		}
-		cardDavClient.deleteContact(account, entry);
-		return true;
+		try {
+			cardDavClient.deleteContact(account, entry);
+			return true;
+		}
+		catch (CardDavException ex) {
+			log.warn("Skipping rejected contact deletion '{}' ({}) for account '{}': {}", displayName(vcard),
+					entry.href(), account.name(), ex.getMessage());
+			return false;
+		}
 	}
 
 	private String displayName(VCard vcard) {

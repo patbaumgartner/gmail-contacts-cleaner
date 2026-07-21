@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -123,6 +124,26 @@ class ContactsCleanupServiceTests {
 			.contains("EMAIL:jane.doe@gmail.com")
 			.doesNotContain("0041");
 		verify(this.cardDavClient, never()).updateContact(eq(account), eq(clean), anyString());
+	}
+
+	@Test
+	void continuesWhenOneContactUpdateIsRejected() {
+		GoogleAccount account = account(false);
+		var rejected = new AddressBookEntry("/contacts/rejected", "\"e1\"", DIRTY_VCARD);
+		var updated = new AddressBookEntry("/contacts/updated", "\"e2\"", DIRTY_VCARD);
+		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of(rejected, updated));
+		doThrow(new CardDavException("400 Bad Request")).when(this.cardDavClient)
+			.updateContact(eq(account), eq(rejected), anyString());
+
+		List<AccountCleanupResult> results = service(account, false).cleanAllAccounts();
+
+		assertThat(results).singleElement().satisfies((result) -> {
+			assertThat(result.successful()).isTrue();
+			assertThat(result.updatedContacts()).isEqualTo(1);
+			assertThat(result.changes()).singleElement();
+		});
+		verify(this.cardDavClient).updateContact(eq(account), eq(rejected), anyString());
+		verify(this.cardDavClient).updateContact(eq(account), eq(updated), anyString());
 	}
 
 	@Test
