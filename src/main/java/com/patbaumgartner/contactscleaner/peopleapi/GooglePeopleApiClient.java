@@ -1,5 +1,6 @@
 package com.patbaumgartner.contactscleaner.peopleapi;
 
+import java.text.Collator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -538,8 +539,14 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient, 
 		}
 
 		private boolean contradictsStructuredName(String family, String given) {
-			return (familyName != null && !familyName.isBlank() && !familyName.trim().equalsIgnoreCase(family))
-					|| (givenName != null && !givenName.isBlank() && !givenName.trim().equalsIgnoreCase(given));
+			return (familyName != null && !familyName.isBlank() && !sameName(familyName, family))
+					|| (givenName != null && !givenName.isBlank() && !sameName(givenName, given));
+		}
+
+		private boolean sameName(String first, String second) {
+			Collator collator = Collator.getInstance(Locale.ROOT);
+			collator.setStrength(Collator.PRIMARY);
+			return collator.compare(first.trim(), second.trim()) == 0;
 		}
 
 		private boolean looksLikeOrganization(String value) {
