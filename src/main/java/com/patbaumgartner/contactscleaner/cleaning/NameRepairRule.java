@@ -85,6 +85,13 @@ final class NameRepairRule implements VCardCleaningRule {
 	private static final Pattern BOUNDARY_QUOTES = Pattern
 		.compile("^[\\s\"'\u201c\u201d\u2018\u2019\u00ab\u00bb`´]+|[\\s\"'\u201c\u201d\u2018\u2019\u00ab\u00bb`´]+$");
 
+	private static final Pattern ESCAPED_DOUBLE_QUOTES = Pattern.compile("\\\\+[\"\u201c\u201d\u00ab\u00bb]");
+
+	private static final Pattern DOUBLE_QUOTES = Pattern.compile("[\"\u201c\u201d\u00ab\u00bb`´]");
+
+	private static final Pattern STANDALONE_SINGLE_QUOTES = Pattern
+		.compile("(?<!\\p{L})['\u2018\u2019]|['\u2018\u2019](?!\\p{L})");
+
 	/**
 	 * Emojis and other symbols that do not belong in a name: symbol characters (includes
 	 * all pictographs), invisible format characters (ZWJ, bidi marks), variation
@@ -94,10 +101,10 @@ final class NameRepairRule implements VCardCleaningRule {
 		.compile("[\\p{So}\\p{Cf}\\uFE0E\\uFE0F\\u20E3]|[\\uD83C\\uDFFB-\\uD83C\\uDFFF]");
 
 	/**
-	 * Cleans every name component: strips boundary quotes (also one-sided strays),
-	 * removes emojis and invisible format characters, collapses whitespace and trims.
-	 * Inner quotes ({@code Patrick "Pat" Miller}) are preserved; a component that would
-	 * end up empty keeps its original value.
+	 * Cleans every name component: removes quote marks, emojis and invisible format
+	 * characters, collapses whitespace and trims. Apostrophes within words, such as
+	 * {@code O'Brien}, are preserved; a component that would end up empty keeps its
+	 * original value.
 	 */
 	private boolean sanitizeNames(VCard vcard) {
 		boolean changed = false;
@@ -141,6 +148,9 @@ final class NameRepairRule implements VCardCleaningRule {
 	private String sanitize(String value) {
 		String result = NAME_NOISE.matcher(value).replaceAll("");
 		result = result.replace("\\\"", "\"").replace("\\'", "'");
+		result = ESCAPED_DOUBLE_QUOTES.matcher(result).replaceAll("");
+		result = DOUBLE_QUOTES.matcher(result).replaceAll("");
+		result = STANDALONE_SINGLE_QUOTES.matcher(result).replaceAll("");
 		result = BOUNDARY_QUOTES.matcher(result).replaceAll("");
 		result = result.replaceAll("\\s+", " ").trim();
 		return result.isEmpty() ? value : result;
