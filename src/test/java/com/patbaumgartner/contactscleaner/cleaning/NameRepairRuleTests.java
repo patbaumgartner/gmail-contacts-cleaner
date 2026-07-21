@@ -110,12 +110,21 @@ class NameRepairRuleTests {
 	}
 
 	@Test
-	void innerNicknameQuotesAreKept() {
+	void removesEmbeddedNicknameQuotesButKeepsApostrophes() {
 		VCard vcard = new VCard();
-		vcard.setFormattedName(new FormattedName("Patrick \"Pat\" Miller"));
+		vcard.setFormattedName(new FormattedName("Patrick \"Pat\" O'Brien"));
 
-		assertThat(this.rule.apply(vcard)).isFalse();
-		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Patrick \"Pat\" Miller");
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Patrick Pat O'Brien");
+	}
+
+	@Test
+	void stripsRepeatedlyEscapedWrappingQuotesFromDisplayNames() {
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new FormattedName("\\\\\"My Name\\\\\""));
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("My Name");
 	}
 
 	@Test
