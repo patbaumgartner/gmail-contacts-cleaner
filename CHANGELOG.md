@@ -84,6 +84,8 @@ Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for to
 - Name repair also flips "Last, First" display names (`Muster, Max` →
   `Max Muster`), populating empty given/family fields; company-style names
   and contradicting structured names are never touched
+- Wrapping-name quote removal and `Last, First` name repair can be configured
+  independently (`remove-wrapping-name-quotes` and `repair-comma-formatted-names`)
 - Instant-messenger removal (`remove-instant-messengers`, on by default): drops
   IMPP handles of dead networks (ICQ, AIM, Yahoo, Skype, ...)
 - Empty-property rule also removes blank and exact-duplicate extended properties
@@ -100,6 +102,8 @@ Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for to
 - DNS-verified e-mail domain check (removes addresses only on authoritative NXDOMAIN)
 - Note removal and empty-contact deletion (no phone, e-mail, birthday, address, URL,
   note or organization)
+- Birthday-only contact deletion (`delete-birthday-only-contacts`): removes contacts
+  with a birthday but no phone, e-mail, address, URL, note, or organization
 
 **Engineering**
 - Spring Boot 4.1 / Spring Modulith 2.1 / Java 25, GraalVM native image via Paketo

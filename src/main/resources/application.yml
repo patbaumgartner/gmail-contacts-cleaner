@@ -99,6 +99,10 @@ contacts-cleaner:
     # Repair broken names: ALL-CAPS -> smart casing, 'Dr' -> 'Dr.', e-mail
     # addresses stuck in name fields are moved to the contact's e-mails.
     repair-names: "${CONTACTS_CLEANER_REPAIR_NAMES:true}"
+    # Independently remove quote characters that wrap a name, e.g. '"Jane Doe"'.
+    remove-wrapping-name-quotes: "${CONTACTS_CLEANER_REMOVE_WRAPPING_NAME_QUOTES:true}"
+    # Independently rewrite unambiguous display names from 'Last, First' to 'First Last'.
+    repair-comma-formatted-names: "${CONTACTS_CLEANER_REPAIR_COMMA_FORMATTED_NAMES:true}"
     # Replace custom e-mail/address labels with standard vCard types: work/home
     # variants (incl. German) become TYPE=WORK/HOME, other custom labels
     # ('Internet email', 'Obsolete', ...) are dropped for the default type.
@@ -126,6 +130,9 @@ contacts-cleaner:
     # Delete contacts carrying no information at all: no phone, no e-mail, no
     # birthday, no address, no URL, no note, no organization.
     delete-empty-contacts: "${CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS:false}"
+    # Delete contacts that have only a birthday (and possibly a name), with no other
+    # phone, e-mail, address, URL, note, or organization. Destructive and opt-in.
+    delete-birthday-only-contacts: "${CONTACTS_CLEANER_DELETE_BIRTHDAY_ONLY_CONTACTS:false}"
 
   # Single-page HTML report written after every run — open
   # reports/cleanup-report-latest.html to review changes (ideal with dry-run).

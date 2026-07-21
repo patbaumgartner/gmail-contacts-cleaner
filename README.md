@@ -100,6 +100,8 @@ Safety first:
 | Name trimming | `" Jane  Doe "` → `"Jane Doe"` | ✅ on |
 | Junk name-suffix removal | `(JIRA)`, `(whatsapp)` import fragments dropped; `Jr.`/`PMP` kept | ✅ on |
 | Name repair | `JANE DOE` → `Jane Doe` (`McDonald`/`van der` aware), `Muster, Max` → `Max Muster`, quotes/emojis/invisible chars stripped from all name parts, `Dr` → `Dr.`, e-mail in name field → moved to e-mails | ✅ on |
+| Wrapping-name quote removal | `"Jane Doe"` → `Jane Doe`; can be disabled independently | ✅ on |
+| Comma-formatted name repair | `Muster, Max` → `Max Muster`; can be disabled independently | ✅ on |
 | Label normalization | custom e-mail/phone/address labels → standard types: `Geschäftlich` → `WORK`, `Mobil` → `CELL`, `Internet email`/`WhatsApp`/`Obsolete` → default | ✅ on |
 | Empty property removal | `EMAIL:`, `ORG:;;`, all-blank `ADR` → dropped | ✅ on |
 | Duplicate **contact** detection | two cards sharing a phone/e-mail, near-identical or word-flipped names → **reported, not touched** (merge them with Google's own "Merge & fix") | ✅ on (report-only) |
@@ -123,6 +125,7 @@ Safety first:
 | Shared phone number removal | number on ≥ 2 contacts = switchboard/household line → dropped, direct lines kept | ⛔ opt-in |
 | Note removal | deletes free-text notes | ⛔ opt-in |
 | Empty contact deletion | no phone, e-mail, birthday, address, URL, note **or** org → delete | ⛔ opt-in |
+| Birthday-only contact deletion | birthday but no phone, e-mail, address, URL, note **or** org → delete | ⛔ opt-in |
 
 ---
 
@@ -263,6 +266,8 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_TRIM_NAMES` | `true` | Trim name whitespace |
 | `CONTACTS_CLEANER_REMOVE_JUNK_NAME_SUFFIXES` | `true` | Drop parenthesized import junk from name suffixes |
 | `CONTACTS_CLEANER_REPAIR_NAMES` | `true` | ALL-CAPS repair, prefix canonicalization, e-mail-in-name rescue |
+| `CONTACTS_CLEANER_REMOVE_WRAPPING_NAME_QUOTES` | `true` | Remove quote characters that wrap a name |
+| `CONTACTS_CLEANER_REPAIR_COMMA_FORMATTED_NAMES` | `true` | Rewrite unambiguous `Last, First` display names to `First Last` |
 | `CONTACTS_CLEANER_NORMALIZE_LABELS` | `true` | Custom e-mail/address labels → standard vCard types |
 | `CONTACTS_CLEANER_REMOVE_EMPTY_PROPERTIES` | `true` | Drop blank `TEL`/`EMAIL`/`URL`/`NOTE`, all-blank `ORG`/`ADR` |
 | `CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS` | `true` | Report-only: log likely duplicate contact pairs |
@@ -286,6 +291,7 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD` | `2` | Contacts sharing a number before it is removed (3 keeps couples' landlines) |
 | `CONTACTS_CLEANER_REMOVE_NOTES` | `false` | ⚠️ Destructive — delete notes |
 | `CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS` | `false` | ⚠️ Destructive — delete contacts without any information |
+| `CONTACTS_CLEANER_DELETE_BIRTHDAY_ONLY_CONTACTS` | `false` | ⚠️ Destructive — delete contacts with only a birthday and name |
 
 ### Scheduler (server profile only)
 
