@@ -3,6 +3,7 @@ package com.patbaumgartner.contactscleaner.orchestration;
 import java.util.List;
 
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateCandidate;
+import com.patbaumgartner.contactscleaner.peopleapi.GoogleContactNameResult;
 import com.patbaumgartner.contactscleaner.peopleapi.GoogleProfilePhotoResult;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
 
@@ -20,6 +21,8 @@ import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
  * in the HTML report
  * @param otherContactsImport result of the optional Other Contacts import
  * @param googleProfilePhotos result of the optional profile photo preference operation
+ * @param googleContactNames result of the optional direct Google contact-name repair
+ * operation
  * @param dryRun whether this was a dry run (changes computed but not applied)
  * @param durationMs wall-clock duration of the run in milliseconds
  * @param message human-readable status message
@@ -27,18 +30,28 @@ import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
 public record AccountCleanupResult(String accountName, boolean successful, int totalContacts, int updatedContacts,
 		int deletedContacts, List<DuplicateCandidate> duplicateCandidates, List<ContactChange> changes,
 		OtherContactsImportResult otherContactsImport, GoogleProfilePhotoResult googleProfilePhotos, boolean dryRun,
-		long durationMs, String message) {
+		GoogleContactNameResult googleContactNames, long durationMs, String message) {
 
 	public AccountCleanupResult {
 		duplicateCandidates = (duplicateCandidates != null) ? List.copyOf(duplicateCandidates) : List.of();
 		changes = (changes != null) ? List.copyOf(changes) : List.of();
 		otherContactsImport = (otherContactsImport != null) ? otherContactsImport : OtherContactsImportResult.EMPTY;
 		googleProfilePhotos = (googleProfilePhotos != null) ? googleProfilePhotos : GoogleProfilePhotoResult.EMPTY;
+		googleContactNames = (googleContactNames != null) ? googleContactNames : GoogleContactNameResult.EMPTY;
+	}
+
+	public AccountCleanupResult(String accountName, boolean successful, int totalContacts, int updatedContacts,
+			int deletedContacts, List<DuplicateCandidate> duplicateCandidates, List<ContactChange> changes,
+			OtherContactsImportResult otherContactsImport, GoogleProfilePhotoResult googleProfilePhotos, boolean dryRun,
+			long durationMs, String message) {
+		this(accountName, successful, totalContacts, updatedContacts, deletedContacts, duplicateCandidates, changes,
+				otherContactsImport, googleProfilePhotos, dryRun, GoogleContactNameResult.EMPTY, durationMs, message);
 	}
 
 	static AccountCleanupResult failure(String accountName, OtherContactsImportResult otherContactsImport,
-			GoogleProfilePhotoResult googleProfilePhotos, long durationMs, String message) {
+			GoogleProfilePhotoResult googleProfilePhotos, GoogleContactNameResult googleContactNames, long durationMs,
+			String message) {
 		return new AccountCleanupResult(accountName, false, 0, 0, 0, List.of(), List.of(), otherContactsImport,
-				googleProfilePhotos, false, durationMs, message);
+				googleProfilePhotos, false, googleContactNames, durationMs, message);
 	}
 }

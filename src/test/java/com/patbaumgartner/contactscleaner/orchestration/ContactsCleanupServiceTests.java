@@ -16,7 +16,9 @@ import com.patbaumgartner.contactscleaner.cleaning.OrganizationCanonicalizer;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsClient;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
+import com.patbaumgartner.contactscleaner.peopleapi.ContactNameClient;
 import com.patbaumgartner.contactscleaner.peopleapi.ContactPhotoClient;
+import com.patbaumgartner.contactscleaner.peopleapi.GoogleContactNameResult;
 import com.patbaumgartner.contactscleaner.peopleapi.GoogleProfilePhotoResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -75,6 +77,9 @@ class ContactsCleanupServiceTests {
 	private ContactPhotoClient contactPhotoClient;
 
 	@Mock
+	private ContactNameClient contactNameClient;
+
+	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
 	private ContactsCleanupService service(GoogleAccount account, boolean deleteEmptyContacts) {
@@ -86,8 +91,8 @@ class ContactsCleanupServiceTests {
 	private ContactsCleanupService service(AccountsProperties accounts,
 			com.patbaumgartner.contactscleaner.cleaning.CleaningProperties properties) {
 		return new ContactsCleanupService(accounts, this.cardDavClient, this.otherContactsClient,
-				this.contactPhotoClient, new ContactCleaner(properties), new DuplicateContactDetector(properties),
-				new SharedPhoneNumberRemover(properties),
+				this.contactPhotoClient, this.contactNameClient, new ContactCleaner(properties),
+				new DuplicateContactDetector(properties), new SharedPhoneNumberRemover(properties),
 				new EmailDomainVerifier(properties, (domain) -> DomainResolution.DELIVERABLE),
 				new OrganizationCanonicalizer(properties), this.eventPublisher);
 	}
@@ -211,6 +216,32 @@ class ContactsCleanupServiceTests {
 		service(account, false).cleanAllAccounts();
 
 		verify(this.contactPhotoClient, never()).preferGoogleProfilePhotos(any());
+	}
+
+	@Test
+	void repairsGoogleContactNamesAndRefreshesTheCardDavSnapshot() {
+		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, false, false,
+				"client-id", "client-secret", "refresh-token", false, true);
+		when(this.contactNameClient.repairCommaFormattedContactNames(account))
+			.thenReturn(new GoogleContactNameResult(3, 1, 2, 0));
+		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
+
+		List<AccountCleanupResult> results = service(account, false).cleanAllAccounts();
+
+		verify(this.contactNameClient).repairCommaFormattedContactNames(account);
+		verify(this.cardDavClient, times(2)).fetchAllContacts(account);
+		assertThat(results.getFirst().googleContactNames()).isEqualTo(new GoogleContactNameResult(3, 1, 2, 0));
+	}
+
+	@Test
+	void skipsGoogleContactNameRepairDuringDryRun() {
+		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, true, false,
+				"client-id", "client-secret", "refresh-token", false, true);
+		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
+
+		service(account, false).cleanAllAccounts();
+
+		verify(this.contactNameClient, never()).repairCommaFormattedContactNames(any());
 	}
 
 	@Test
