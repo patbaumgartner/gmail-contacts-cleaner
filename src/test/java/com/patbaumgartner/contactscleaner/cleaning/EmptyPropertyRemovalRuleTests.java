@@ -49,12 +49,35 @@ class EmptyPropertyRemovalRuleTests {
 	void removesAllBlankAddresses() {
 		VCard vcard = new VCard();
 		vcard.addAddress(new Address());
-		Address realAddress = new Address();
-		realAddress.setLocality("Zurich");
-		vcard.addAddress(realAddress);
+		Address completeAddress = new Address();
+		completeAddress.setStreetAddress("Bahnhofstrasse 1");
+		completeAddress.setLocality("Zurich");
+		vcard.addAddress(completeAddress);
 
 		assertThat(rule.apply(vcard)).isTrue();
-		assertThat(vcard.getAddresses()).containsExactly(realAddress);
+		assertThat(vcard.getAddresses()).containsExactly(completeAddress);
+	}
+
+	@Test
+	void removesAddressesWithOnlyCityOrCountry() {
+		VCard vcard = new VCard();
+		Address cityOnly = new Address();
+		cityOnly.setLocality("Zurich");
+		vcard.addAddress(cityOnly);
+		Address countryOnly = new Address();
+		countryOnly.setCountry("Switzerland");
+		vcard.addAddress(countryOnly);
+		Address cityAndCountry = new Address();
+		cityAndCountry.setLocality("Zurich");
+		cityAndCountry.setCountry("Switzerland");
+		vcard.addAddress(cityAndCountry);
+		Address postalAddress = new Address();
+		postalAddress.setPostalCode("8001");
+		postalAddress.setLocality("Zurich");
+		vcard.addAddress(postalAddress);
+
+		assertThat(rule.apply(vcard)).isTrue();
+		assertThat(vcard.getAddresses()).containsExactly(postalAddress);
 	}
 
 	@Test

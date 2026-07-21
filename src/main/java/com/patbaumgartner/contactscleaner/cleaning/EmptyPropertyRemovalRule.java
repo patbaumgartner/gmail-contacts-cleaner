@@ -80,7 +80,7 @@ final class EmptyPropertyRemovalRule implements VCardCleaningRule {
 	private boolean removeBlankAddresses(VCard vcard) {
 		boolean changed = false;
 		for (Iterator<Address> iterator = vcard.getAddresses().iterator(); iterator.hasNext();) {
-			if (isBlank(iterator.next())) {
+			if (isBlankOrLocationOnly(iterator.next())) {
 				iterator.remove();
 				changed = true;
 			}
@@ -88,10 +88,9 @@ final class EmptyPropertyRemovalRule implements VCardCleaningRule {
 		return changed;
 	}
 
-	private boolean isBlank(Address address) {
+	private boolean isBlankOrLocationOnly(Address address) {
 		return isBlank(address.getStreetAddress()) && isBlank(address.getExtendedAddress())
-				&& isBlank(address.getPoBox()) && isBlank(address.getLocality()) && isBlank(address.getRegion())
-				&& isBlank(address.getPostalCode()) && isBlank(address.getCountry());
+				&& isBlank(address.getPoBox()) && isBlank(address.getRegion()) && isBlank(address.getPostalCode());
 	}
 
 	private boolean isBlank(String value) {
