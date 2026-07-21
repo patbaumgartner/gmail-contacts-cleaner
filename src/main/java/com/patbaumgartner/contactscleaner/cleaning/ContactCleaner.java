@@ -2,6 +2,7 @@ package com.patbaumgartner.contactscleaner.cleaning;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import ezvcard.VCard;
 import org.slf4j.Logger;
@@ -82,6 +83,9 @@ public class ContactCleaner {
 		}
 		if (properties.normalizeEmailAddresses()) {
 			rules.add(new EmailNormalizationRule());
+		}
+		if (!properties.removeEmailDomains().isEmpty()) {
+			rules.add(new EmailDomainRemovalRule(Set.copyOf(properties.removeEmailDomains())));
 		}
 		if (properties.removeInvalidEmails()) {
 			rules.add(new InvalidEmailRemovalRule());
