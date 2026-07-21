@@ -130,20 +130,27 @@ public class ContactsCleanupService {
 		GoogleProfilePhotoResult googleProfilePhotos = GoogleProfilePhotoResult.EMPTY;
 		log.info("Starting cleanup for account '{}'{}", account.name(), account.dryRun() ? " (dry run)" : "");
 		try {
+			log.info("Step: fetching CardDAV contacts for account '{}'", account.name());
 			List<AddressBookEntry> entries = cardDavClient.fetchAllContacts(account);
+			log.info("Step complete: fetched {} CardDAV contacts for account '{}'", entries.size(), account.name());
 			boolean refreshEntries = false;
 			if (importsOtherContacts(account)) {
+				log.info("Step: importing Other contacts for account '{}'", account.name());
 				otherContactsImport = importOtherContacts(account, entries);
 				refreshEntries = true;
 			}
 			if (prefersGoogleProfilePhotos(account)) {
+				log.info("Step: preferring Google profile photos for account '{}'", account.name());
 				googleProfilePhotos = preferGoogleProfilePhotos(account);
 				refreshEntries = true;
 			}
 			if (refreshEntries) {
 				// People API writes can take time to appear, but a second CardDAV read
 				// avoids restoring stale vCard photos during the cleanup write pass.
+				log.info("Step: refreshing CardDAV contacts after People API changes for account '{}'", account.name());
 				entries = cardDavClient.fetchAllContacts(account);
+				log.info("Step complete: refreshed {} CardDAV contacts for account '{}'", entries.size(),
+						account.name());
 			}
 
 			// Pass 1: parse and clean every contact individually. Snapshots taken
@@ -152,6 +159,7 @@ public class ContactsCleanupService {
 			List<VCard> vcards = new ArrayList<>();
 			Map<VCard, List<String>> snapshots = new IdentityHashMap<>();
 			Set<VCard> changedContacts = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+			log.info("Step: cleaning and normalizing {} contacts for account '{}'", entries.size(), account.name());
 			for (AddressBookEntry entry : entries) {
 				VCard vcard = parse(entry);
 				if (vcard == null) {
@@ -166,6 +174,7 @@ public class ContactsCleanupService {
 			}
 
 			// Pass 2: cross-contact cleanup — needs the whole address book at once.
+			log.info("Step: applying cross-contact cleanup rules for account '{}'", account.name());
 			List<ContactChange> changes = new ArrayList<>();
 			changedContacts.addAll(sharedPhoneNumberRemover.removeSharedNumbers(vcards));
 			changedContacts.addAll(emailDomainVerifier.removeUndeliverableAddresses(vcards));
@@ -175,7 +184,10 @@ public class ContactsCleanupService {
 			// only phone number was a shared office line is deleted (when enabled).
 			int updated = 0;
 			int deleted = 0;
+			int written = 0;
 			List<VCard> survivingContacts = new ArrayList<>();
+			log.info("Step: writing cleanup changes for {} contacts in batches of 100 for account '{}'", vcards.size(),
+					account.name());
 			for (int i = 0; i < vcards.size(); i++) {
 				VCard vcard = vcards.get(i);
 				AddressBookEntry entry = parsedEntries.get(i);
@@ -190,6 +202,12 @@ public class ContactsCleanupService {
 						changes.add(diff(vcard, snapshots.get(vcard)));
 					}
 					survivingContacts.add(vcard);
+				}
+				written++;
+				if (written % 100 == 0) {
+					log.info(
+							"Cleanup write progress for account '{}': {} of {} processed ({} remaining); {} updated, {} deleted",
+							account.name(), written, vcards.size(), vcards.size() - written, updated, deleted);
 				}
 			}
 			List<DuplicateCandidate> duplicates = duplicateContactDetector.detect(survivingContacts);

@@ -29,6 +29,8 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 
 	private static final long PHOTO_DELETE_INTERVAL_MS = 800;
 
+	private static final int PROGRESS_BATCH_SIZE = 100;
+
 	private static final Logger log = LoggerFactory.getLogger(GooglePeopleApiClient.class);
 
 	private final RestClient restClient;
@@ -58,12 +60,14 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 			int failed = 0;
 			Set<String> knownEmails = new HashSet<>(knownEmailAddresses);
 			Set<String> knownPhones = new HashSet<>(knownPhoneNumbers);
+			Integer totalSize = null;
 			String pageToken = null;
 			do {
 				OtherContactsPage page = listOtherContacts(accessToken, pageToken);
 				List<Person> contacts = (page.otherContacts() != null) ? page.otherContacts() : List.of();
-				discovered += contacts.size();
+				totalSize = reportOtherContactsTotal(account, totalSize, page.totalSize());
 				for (Person contact : contacts) {
+					discovered++;
 					if (matchesRegularContact(contact, knownEmails, knownPhones)) {
 						skipped++;
 					}
@@ -79,15 +83,13 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 									contact.resourceName(), ex);
 						}
 					}
+					logOtherContactsProgress(account, discovered, totalSize, promoted, skipped, failed);
 				}
-				log.info("Other contacts import progress: {} discovered, {} promoted, {} skipped, {} failed",
-						discovered, promoted, skipped, failed);
 				pageToken = page.nextPageToken();
-				if ((pageToken == null || pageToken.isBlank()) && page.totalSize() != null
-						&& discovered < page.totalSize()) {
+				if ((pageToken == null || pageToken.isBlank()) && totalSize != null && discovered < totalSize) {
 					log.warn(
 							"Google reported {} Other contacts but returned only {} without a continuation token for account '{}'",
-							page.totalSize(), discovered, account.name());
+							totalSize, discovered, account.name());
 				}
 			}
 			while (pageToken != null && !pageToken.isBlank());
@@ -108,41 +110,43 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 			int removed = 0;
 			int skipped = 0;
 			int failed = 0;
+			Integer totalPeople = null;
 			String pageToken = null;
 			do {
 				ConnectionsPage page = listConnections(accessToken, pageToken);
 				List<Person> contacts = (page.connections() != null) ? page.connections() : List.of();
+				totalPeople = reportConnectionsTotal(account, totalPeople, page.totalPeople());
 				for (Person contact : contacts) {
 					scanned++;
 					if (!hasContactPhotoAndGoogleProfilePhoto(contact)) {
 						skipped++;
-						continue;
 					}
-					try {
-						throttlePhotoDeletes();
-						deleteContactPhoto(accessToken, contact.resourceName());
-						removed++;
+					else {
+						try {
+							throttlePhotoDeletes();
+							deleteContactPhoto(accessToken, contact.resourceName());
+							removed++;
+						}
+						catch (HttpClientErrorException.NotFound ex) {
+							skipped++;
+							log.debug("Contact-specific photo for '{}' was already absent", contact.resourceName());
+						}
+						catch (HttpClientErrorException.TooManyRequests ex) {
+							failed++;
+							log.warn(
+									"Google rate-limited profile photo updates for account '{}' after {} removals; "
+											+ "stopping this pass to avoid further failed requests",
+									account.name(), removed);
+							return new GoogleProfilePhotoResult(scanned, removed, skipped, failed);
+						}
+						catch (RestClientException ex) {
+							failed++;
+							log.warn("Could not remove contact-specific photo for '{}' — continuing without retry",
+									contact.resourceName(), ex);
+						}
 					}
-					catch (HttpClientErrorException.NotFound ex) {
-						skipped++;
-						log.debug("Contact-specific photo for '{}' was already absent", contact.resourceName());
-					}
-					catch (HttpClientErrorException.TooManyRequests ex) {
-						failed++;
-						log.warn(
-								"Google rate-limited profile photo updates for account '{}' after {} removals; "
-										+ "stopping this pass to avoid further failed requests",
-								account.name(), removed);
-						return new GoogleProfilePhotoResult(scanned, removed, skipped, failed);
-					}
-					catch (RestClientException ex) {
-						failed++;
-						log.warn("Could not remove contact-specific photo for '{}' — continuing without retry",
-								contact.resourceName(), ex);
-					}
+					logPhotoProgress(account, scanned, totalPeople, removed, skipped, failed);
 				}
-				log.info("Google profile photo progress: {} scanned, {} contact photos removed, {} skipped, {} failed",
-						scanned, removed, skipped, failed);
 				pageToken = page.nextPageToken();
 			}
 			while (pageToken != null && !pageToken.isBlank());
@@ -158,6 +162,55 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 		if (!account.hasOtherContactsImportCredentials()) {
 			throw new OtherContactsException("People API access for account '%s' requires OAuth client ID, "
 					+ "client secret, and refresh token".formatted(account.name()));
+		}
+	}
+
+	private Integer reportOtherContactsTotal(GoogleAccount account, Integer knownTotal, Integer reportedTotal) {
+		if (knownTotal == null && reportedTotal != null) {
+			log.info("Other contacts import for account '{}': {} contacts reported; logging progress every {} contacts",
+					account.name(), reportedTotal, PROGRESS_BATCH_SIZE);
+			return reportedTotal;
+		}
+		return knownTotal;
+	}
+
+	private Integer reportConnectionsTotal(GoogleAccount account, Integer knownTotal, Integer reportedTotal) {
+		if (knownTotal == null && reportedTotal != null) {
+			log.info(
+					"Google profile photo preference for account '{}': {} contacts reported; logging progress every {} contacts",
+					account.name(), reportedTotal, PROGRESS_BATCH_SIZE);
+			return reportedTotal;
+		}
+		return knownTotal;
+	}
+
+	private void logOtherContactsProgress(GoogleAccount account, int discovered, Integer totalSize, int promoted,
+			int skipped, int failed) {
+		if (discovered % PROGRESS_BATCH_SIZE != 0) {
+			return;
+		}
+		logProgress("Other contacts import", account, discovered, totalSize, promoted, skipped, failed, "promoted");
+	}
+
+	private void logPhotoProgress(GoogleAccount account, int scanned, Integer totalPeople, int removed, int skipped,
+			int failed) {
+		if (scanned % PROGRESS_BATCH_SIZE != 0) {
+			return;
+		}
+		logProgress("Google profile photo preference", account, scanned, totalPeople, removed, skipped, failed,
+				"photos removed");
+	}
+
+	private void logProgress(String operation, GoogleAccount account, int processed, Integer total, int completed,
+			int skipped, int failed, String completedLabel) {
+		if (total != null) {
+			log.info("{} progress for account '{}': {} of {} processed ({} remaining); {} {}, {} skipped, {} failed",
+					operation, account.name(), processed, total, Math.max(total - processed, 0), completed,
+					completedLabel, skipped, failed);
+		}
+		else {
+			log.info("{} progress for account '{}': {} processed (total unavailable); {} {}, {} skipped, {} failed",
+					operation, account.name(), processed, completed, completedLabel, skipped, failed);
 		}
 	}
 
@@ -306,7 +359,7 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 	}
 
 	private record ConnectionsPage(@JsonProperty("connections") List<Person> connections,
-			@JsonProperty("nextPageToken") String nextPageToken) {
+			@JsonProperty("nextPageToken") String nextPageToken, @JsonProperty("totalPeople") Integer totalPeople) {
 	}
 
 	private record Person(@JsonProperty("resourceName") String resourceName,

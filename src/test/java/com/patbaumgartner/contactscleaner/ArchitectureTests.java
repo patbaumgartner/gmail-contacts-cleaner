@@ -24,7 +24,7 @@ class ArchitectureTests {
 				.naming((naming) -> naming.classesShouldNotMatch(".*Impl").interfacesShouldNotHavePrefixI()))
 			.logging((logging) -> logging.loggersShouldFollowConventions(org.slf4j.Logger.class, "log|logger"))
 			.spring((spring) -> spring.noAutowiredFields()
-				.boot((boot) -> boot.springBootApplicationShouldBeIn("com.patbaumgartner.contactscleaner"))
+				.boot((boot) -> boot.applicationClassShouldResideInPackage("com.patbaumgartner.contactscleaner"))
 				.services((services) -> services.shouldNotDependOnControllers()))
 			.build()
 			.check();
