@@ -16,6 +16,9 @@ Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for to
   `addressbook-multiget` in batches of 25, etag-guarded `PUT`/`DELETE`, request
   throttling, bisect-and-retry on server errors
 - **Multiple configurable accounts**, each with `enabled` and `dry-run` flags
+- Optional per-account Google People API import: paginates through **Other contacts**
+  and promotes them sequentially to My Contacts before the CardDAV cleaning pass;
+  requires per-account OAuth client credentials and refresh token
 - Nightly built-in scheduler (`server` profile, cron/zone configurable) or one-shot
   startup run for external cron / NAS schedulers
 - **Single-page HTML report** after every run: per-account summary, red/green

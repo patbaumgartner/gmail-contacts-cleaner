@@ -3,6 +3,7 @@ package com.patbaumgartner.contactscleaner.config;
 import java.net.URI;
 
 import com.patbaumgartner.contactscleaner.carddav.CardDavProperties;
+import com.patbaumgartner.contactscleaner.peopleapi.PeopleApiProperties;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -42,6 +43,11 @@ class RestClientConfiguration {
 		WebDavAwareRequestFactory requestFactory = new WebDavAwareRequestFactory(httpClient);
 		requestFactory.setReadTimeout(properties.readTimeout());
 		return builder.baseUrl(properties.baseUrl()).requestFactory(requestFactory).build();
+	}
+
+	@Bean
+	RestClient peopleApiRestClient(RestClient.Builder builder, PeopleApiProperties properties) {
+		return builder.baseUrl(properties.baseUrl()).build();
 	}
 
 	/**

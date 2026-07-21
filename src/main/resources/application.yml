@@ -40,6 +40,12 @@ contacts-cleaner:
     read-timeout: 60s
     request-delay: 200ms
 
+  # Optional People API integration for promoting an account's Other contacts.
+  # OAuth credentials are configured per account, never globally.
+  people-api:
+    base-url: "${CONTACTS_CLEANER_PEOPLE_API_BASE_URL:https://people.googleapis.com}"
+    token-url: "${CONTACTS_CLEANER_OAUTH_TOKEN_URL:https://oauth2.googleapis.com/token}"
+
   # Cleaning rules. Destructive options are opt-in.
   cleaning:
     normalize-phone-numbers: "${CONTACTS_CLEANER_NORMALIZE_PHONE_NUMBERS:true}"

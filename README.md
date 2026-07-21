@@ -45,12 +45,13 @@ This project is the spiritual successor of
 [gcontacts-cleaner](https://github.com/patbaumgartner/gcontacts-cleaner) (2011, built on
 the long-retired GData Contacts API), rebuilt for today's Google: it cleans any number
 of configured accounts, runs as a nightly background job, and authenticates with a
-simple [app password](https://myaccount.google.com/apppasswords) — no OAuth consent
-screens, no Google Cloud project, no API quotas to manage.
+simple [app password](https://myaccount.google.com/apppasswords). An optional OAuth
+People API integration can also promote an account's Other contacts into My Contacts.
 
 > [!NOTE]
-> **Why CardDAV and not the People API?** The People API requires OAuth 2.0 with a
-> Google Cloud project and periodic re-consent. Google's
+> **Why CardDAV and not the People API?** Normal cleanup uses CardDAV, so it does not
+> require OAuth or a Google Cloud project. The optional Other contacts importer does
+> require OAuth 2.0, a Google Cloud project, and a refresh token. Google's
 > [CardDAV endpoint](https://developers.google.com/people/carddav) — the same protocol
 > iOS and macOS use to sync contacts — accepts app passwords via HTTP Basic auth.
 > Set it up once per account and it keeps working.
@@ -74,6 +75,12 @@ screens, no Google Cloud project, no API quotas to manage.
 │         Basic auth (app password) · google.com/carddav/v1            │
 └──────────────────────────────────────────────────────────────────────┘
 ```
+
+When `import-other-contacts` is enabled for an account, the app first lists its Google
+Other contacts through the People API, copies them sequentially to My Contacts, then
+fetches the normal CardDAV address book and applies the same cleaning rules. Google may
+take time to expose a newly copied contact through CardDAV; delayed entries are cleaned
+on the next run.
 
 Safety first:
 
@@ -251,9 +258,29 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `contacts-cleaner.accounts[0].app-password` | App password — never your real password |
 | `contacts-cleaner.accounts[0].enabled` | Participate in runs (default `true`) |
 | `contacts-cleaner.accounts[0].dry-run` | Compute + log changes only (default `false`, **start with `true`**) |
+| `contacts-cleaner.accounts[0].import-other-contacts` | Opt in to promote Google Other contacts before cleanup (default `false`; skipped during dry run) |
+| `contacts-cleaner.accounts[0].oauth-client-id` | OAuth client ID for this account's Other contacts import |
+| `contacts-cleaner.accounts[0].oauth-client-secret` | OAuth client secret for this account's Other contacts import; keep it only in ignored `.env` |
+| `contacts-cleaner.accounts[0].oauth-refresh-token` | Offline OAuth refresh token for this account's Other contacts import; keep it only in ignored `.env` |
 
 Add more accounts as `contacts-cleaner.accounts[1].*`,
 `contacts-cleaner.accounts[2].*`, … . The same `.env` works for Maven and Docker.
+
+### Importing Other contacts
+
+Google keeps **Other contacts** outside the CardDAV address book. To promote them for
+one configured account, create an OAuth client in a Google Cloud project, enable the
+People API, and obtain a refresh token with the
+`https://www.googleapis.com/auth/contacts.other.readonly` and
+`https://www.googleapis.com/auth/contacts` scopes. The first scope lists Other
+contacts; the second authorizes their promotion into My Contacts. Put the OAuth client
+ID, client secret, and refresh token on that account in the ignored `.env`, then set
+`import-other-contacts=true`. The importer only copies names, e-mail addresses, and
+phone numbers because those are the fields Google permits for this operation.
+
+Keep `dry-run=true` for the regular cleaning review, but note that it intentionally
+does not call the People API importer. Enable the import only for a non-dry run once the
+OAuth configuration is ready.
 
 ### Cleaning rules
 
@@ -368,7 +395,8 @@ Everything the protocol *does* expose is covered by the rules.
 
 **Q: My account uses Advanced Protection / no app passwords.**
 A: App passwords are unavailable under Google's Advanced Protection Program. You would
-need to fall back to the People API with OAuth — out of scope for this project.
+need to use the People API with OAuth. The optional Other contacts importer supports
+that promotion workflow, but the regular CardDAV cleanup still requires an app password.
 
 ---
 
