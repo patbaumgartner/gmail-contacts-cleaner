@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.patbaumgartner.contactscleaner.account.GoogleAccount;
 import org.springframework.http.MediaType;
@@ -23,7 +24,7 @@ import org.springframework.stereotype.Component;
  * People API client for account-specific contact operations unavailable through CardDAV.
  */
 @Component
-class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
+class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient, ContactNameClient {
 
 	private static final String COPY_MASK = "names,emailAddresses,phoneNumbers";
 
@@ -37,7 +38,7 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 
 	private final PeopleApiProperties properties;
 
-	private long nextPhotoDeleteAt;
+	private long nextPeopleWriteAt;
 
 	GooglePeopleApiClient(@Qualifier("peopleApiRestClient") RestClient peopleApiRestClient,
 			PeopleApiProperties properties) {
@@ -123,7 +124,7 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 					}
 					else {
 						try {
-							throttlePhotoDeletes();
+							throttlePeopleWrites();
 							deleteContactPhoto(accessToken, contact.resourceName());
 							removed++;
 						}
@@ -155,6 +156,60 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 		catch (RestClientException ex) {
 			throw new OtherContactsException(
 					"Failed to prefer Google profile photos for account '%s'".formatted(account.name()), ex);
+		}
+	}
+
+	@Override
+	public GoogleContactNameResult repairCommaFormattedContactNames(GoogleAccount account) {
+		validateOAuthCredentials(account);
+		try {
+			String accessToken = refreshAccessToken(account);
+			int scanned = 0;
+			int updated = 0;
+			int skipped = 0;
+			int failed = 0;
+			Integer totalPeople = null;
+			String pageToken = null;
+			do {
+				ConnectionsPage page = listNameConnections(accessToken, pageToken);
+				List<Person> contacts = (page.connections() != null) ? page.connections() : List.of();
+				totalPeople = reportConnectionsTotal(account, totalPeople, page.totalPeople());
+				for (Person contact : contacts) {
+					scanned++;
+					ContactNameUpdate update = commaNameUpdate(contact);
+					if (update == null) {
+						skipped++;
+					}
+					else {
+						try {
+							throttlePeopleWrites();
+							updateContactName(accessToken, contact.resourceName(), update);
+							updated++;
+						}
+						catch (HttpClientErrorException.TooManyRequests ex) {
+							failed++;
+							log.warn(
+									"Google rate-limited contact-name updates for account '{}' after {} updates; "
+											+ "stopping this pass to avoid further failed requests",
+									account.name(), updated);
+							return new GoogleContactNameResult(scanned, updated, skipped, failed);
+						}
+						catch (RestClientException ex) {
+							failed++;
+							log.warn("Could not update contact name for '{}' — continuing without retry",
+									contact.resourceName(), ex);
+						}
+					}
+					logNameProgress(account, scanned, totalPeople, updated, skipped, failed);
+				}
+				pageToken = page.nextPageToken();
+			}
+			while (pageToken != null && !pageToken.isBlank());
+			return new GoogleContactNameResult(scanned, updated, skipped, failed);
+		}
+		catch (RestClientException ex) {
+			throw new OtherContactsException(
+					"Failed to repair Google contact names for account '%s'".formatted(account.name()), ex);
 		}
 	}
 
@@ -199,6 +254,14 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 		}
 		logProgress("Google profile photo preference", account, scanned, totalPeople, removed, skipped, failed,
 				"photos removed");
+	}
+
+	private void logNameProgress(GoogleAccount account, int scanned, Integer totalPeople, int updated, int skipped,
+			int failed) {
+		if (scanned % PROGRESS_BATCH_SIZE != 0) {
+			return;
+		}
+		logProgress("Google contact name repair", account, scanned, totalPeople, updated, skipped, failed, "updated");
 	}
 
 	private void logProgress(String operation, GoogleAccount account, int processed, Integer total, int completed,
@@ -256,6 +319,18 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 		}).headers((headers) -> headers.setBearerAuth(accessToken)).retrieve().body(ConnectionsPage.class);
 	}
 
+	private ConnectionsPage listNameConnections(String accessToken, String pageToken) {
+		return restClient.get().uri((builder) -> {
+			builder.path("/v1/people/me/connections")
+				.queryParam("personFields", "names,metadata")
+				.queryParam("pageSize", 1000);
+			if (pageToken != null) {
+				builder.queryParam("pageToken", pageToken);
+			}
+			return builder.build();
+		}).headers((headers) -> headers.setBearerAuth(accessToken)).retrieve().body(ConnectionsPage.class);
+	}
+
 	private boolean hasContactPhotoAndGoogleProfilePhoto(Person contact) {
 		boolean hasContactPhoto = contact.photos().stream().anyMatch((photo) -> photo.sourceType().equals("CONTACT"));
 		boolean hasGoogleProfilePhoto = contact.photos()
@@ -263,6 +338,24 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 			.anyMatch((photo) -> !Boolean.TRUE.equals(photo.defaultPhoto())
 					&& (photo.sourceType().equals("PROFILE") || photo.sourceType().equals("DOMAIN_PROFILE")));
 		return hasContactPhoto && hasGoogleProfilePhoto;
+	}
+
+	private ContactNameUpdate commaNameUpdate(Person contact) {
+		if (contact.resourceName() == null || contact.resourceName().isBlank()) {
+			return null;
+		}
+		ContactSource source = contact.contactSource();
+		if (source == null || ((contact.etag() == null || contact.etag().isBlank())
+				&& (source.etag() == null || source.etag().isBlank()))) {
+			return null;
+		}
+		return contact.names()
+			.stream()
+			.filter(Name::isContactName)
+			.map((name) -> name.commaNameUpdate(contact.etag(), source))
+			.filter(java.util.Objects::nonNull)
+			.findFirst()
+			.orElse(null);
 	}
 
 	private boolean matchesRegularContact(Person contact, Set<String> knownEmails, Set<String> knownPhones) {
@@ -329,24 +422,39 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 			.toBodilessEntity();
 	}
 
-	private void throttlePhotoDeletes() {
+	private void updateContactName(String accessToken, String resourceName, ContactNameUpdate update) {
+		restClient.patch()
+			.uri((builder) -> builder.path("/v1/")
+				.path(resourceName)
+				.path(":updateContact")
+				.queryParam("updatePersonFields", "names")
+				.build())
+			.headers((headers) -> headers.setBearerAuth(accessToken))
+			.contentType(MediaType.APPLICATION_JSON)
+			.body(new ContactNameUpdateRequest(resourceName, update.etag(),
+					new PersonMetadata(List.of(update.source())), List.of(update.name())))
+			.retrieve()
+			.toBodilessEntity();
+	}
+
+	private void throttlePeopleWrites() {
 		long delay;
 		synchronized (this) {
 			long now = System.currentTimeMillis();
-			delay = nextPhotoDeleteAt - now;
-			nextPhotoDeleteAt = Math.max(nextPhotoDeleteAt, now) + PHOTO_DELETE_INTERVAL_MS;
+			delay = nextPeopleWriteAt - now;
+			nextPeopleWriteAt = Math.max(nextPeopleWriteAt, now) + PHOTO_DELETE_INTERVAL_MS;
 		}
-		waitForPhotoDeleteSlot(delay);
+		waitForPeopleWriteSlot(delay);
 	}
 
-	private void waitForPhotoDeleteSlot(long delay) {
+	private void waitForPeopleWriteSlot(long delay) {
 		if (delay > 0) {
 			try {
 				Thread.sleep(delay);
 			}
 			catch (InterruptedException ex) {
 				Thread.currentThread().interrupt();
-				throw new OtherContactsException("Interrupted while throttling Google profile photo updates", ex);
+				throw new OtherContactsException("Interrupted while throttling Google People API updates", ex);
 			}
 		}
 	}
@@ -362,15 +470,106 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 			@JsonProperty("nextPageToken") String nextPageToken, @JsonProperty("totalPeople") Integer totalPeople) {
 	}
 
-	private record Person(@JsonProperty("resourceName") String resourceName,
+	private record Person(@JsonProperty("resourceName") String resourceName, @JsonProperty("etag") String etag,
 			@JsonProperty("emailAddresses") List<EmailAddress> emailAddresses,
-			@JsonProperty("phoneNumbers") List<PhoneNumber> phoneNumbers, @JsonProperty("photos") List<Photo> photos) {
+			@JsonProperty("phoneNumbers") List<PhoneNumber> phoneNumbers, @JsonProperty("photos") List<Photo> photos,
+			@JsonProperty("names") List<Name> names, @JsonProperty("metadata") PersonMetadata metadata) {
 
 		private Person {
 			emailAddresses = (emailAddresses != null) ? List.copyOf(emailAddresses) : List.of();
 			phoneNumbers = (phoneNumbers != null) ? List.copyOf(phoneNumbers) : List.of();
 			photos = (photos != null) ? List.copyOf(photos) : List.of();
+			names = (names != null) ? List.copyOf(names) : List.of();
 		}
+
+		private ContactSource contactSource() {
+			return (metadata != null) ? metadata.contactSource() : null;
+		}
+	}
+
+	private record PersonMetadata(@JsonProperty("sources") List<ContactSource> sources) {
+
+		private PersonMetadata {
+			sources = (sources != null) ? List.copyOf(sources) : List.of();
+		}
+
+		private ContactSource contactSource() {
+			return sources.stream().filter((source) -> "CONTACT".equals(source.type())).findFirst().orElse(null);
+		}
+	}
+
+	private record ContactSource(@JsonProperty("type") String type, @JsonProperty("etag") String etag) {
+	}
+
+	private record Name(@JsonProperty("metadata") NameMetadata metadata,
+			@JsonProperty("unstructuredName") String unstructuredName, @JsonProperty("familyName") String familyName,
+			@JsonProperty("givenName") String givenName, @JsonProperty("middleName") String middleName,
+			@JsonProperty("honorificPrefix") String honorificPrefix,
+			@JsonProperty("honorificSuffix") String honorificSuffix,
+			@JsonProperty("phoneticFullName") String phoneticFullName,
+			@JsonProperty("phoneticFamilyName") String phoneticFamilyName,
+			@JsonProperty("phoneticGivenName") String phoneticGivenName,
+			@JsonProperty("phoneticMiddleName") String phoneticMiddleName,
+			@JsonProperty("phoneticHonorificPrefix") String phoneticHonorificPrefix,
+			@JsonProperty("phoneticHonorificSuffix") String phoneticHonorificSuffix) {
+
+		private boolean isContactName() {
+			return metadata != null && metadata.source() != null && "CONTACT".equals(metadata.source().type());
+		}
+
+		private ContactNameUpdate commaNameUpdate(String etag, ContactSource source) {
+			if (unstructuredName == null || unstructuredName.contains("@")) {
+				return null;
+			}
+			int comma = unstructuredName.indexOf(',');
+			if (comma <= 0 || comma != unstructuredName.lastIndexOf(',')) {
+				return null;
+			}
+			String family = unstructuredName.substring(0, comma).trim();
+			String given = unstructuredName.substring(comma + 1).trim();
+			if (family.isEmpty() || given.isEmpty() || looksLikeOrganization(family) || looksLikeOrganization(given)
+					|| contradictsStructuredName(family, given)) {
+				return null;
+			}
+			return new ContactNameUpdate(etag, source,
+					new NameUpdate(given + " " + family, family, given, middleName, honorificPrefix, honorificSuffix,
+							phoneticFullName, phoneticFamilyName, phoneticGivenName, phoneticMiddleName,
+							phoneticHonorificPrefix, phoneticHonorificSuffix));
+		}
+
+		private boolean contradictsStructuredName(String family, String given) {
+			return (familyName != null && !familyName.isBlank() && !familyName.trim().equalsIgnoreCase(family))
+					|| (givenName != null && !givenName.isBlank() && !givenName.trim().equalsIgnoreCase(given));
+		}
+
+		private boolean looksLikeOrganization(String value) {
+			return value.contains("&") || value
+				.matches("(?i).*\\b(ag|gmbh|inc|ltd|llc|sa|kg|co|plc|sarl|sagl|partner|partners|associates)\\b\\.?.*");
+		}
+	}
+
+	private record NameMetadata(@JsonProperty("source") ContactSource source) {
+	}
+
+	private record ContactNameUpdate(String etag, ContactSource source, NameUpdate name) {
+	}
+
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	private record NameUpdate(@JsonProperty("unstructuredName") String unstructuredName,
+			@JsonProperty("familyName") String familyName, @JsonProperty("givenName") String givenName,
+			@JsonProperty("middleName") String middleName, @JsonProperty("honorificPrefix") String honorificPrefix,
+			@JsonProperty("honorificSuffix") String honorificSuffix,
+			@JsonProperty("phoneticFullName") String phoneticFullName,
+			@JsonProperty("phoneticFamilyName") String phoneticFamilyName,
+			@JsonProperty("phoneticGivenName") String phoneticGivenName,
+			@JsonProperty("phoneticMiddleName") String phoneticMiddleName,
+			@JsonProperty("phoneticHonorificPrefix") String phoneticHonorificPrefix,
+			@JsonProperty("phoneticHonorificSuffix") String phoneticHonorificSuffix) {
+	}
+
+	private record ContactNameUpdateRequest(@JsonProperty("resourceName") String resourceName,
+			@JsonProperty("etag") String etag, @JsonProperty("metadata") PersonMetadata metadata,
+			@JsonProperty("names") List<NameUpdate> names) {
 	}
 
 	private record EmailAddress(@JsonProperty("value") String value) {

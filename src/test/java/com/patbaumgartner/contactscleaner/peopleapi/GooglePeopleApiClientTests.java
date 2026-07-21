@@ -176,4 +176,54 @@ class GooglePeopleApiClientTests {
 		this.server.verify();
 	}
 
+	@Test
+	void repairsSafeCommaFormattedContactNames() {
+		this.server.expect(requestTo("https://oauth2.googleapis.com/token"))
+			.andRespond(withSuccess("{\"access_token\":\"access-token\"}", MediaType.APPLICATION_JSON));
+		this.server
+			.expect(requestTo(
+					"https://people.googleapis.com/v1/people/me/connections?personFields=names,metadata&pageSize=1000"))
+			.andRespond(withSuccess(
+					"{\"connections\":[{\"resourceName\":\"people/contact\",\"etag\":\"person-etag\","
+							+ "\"metadata\":{\"sources\":[{\"type\":\"CONTACT\",\"etag\":\"contact-etag\"}]},"
+							+ "\"names\":[{\"metadata\":{\"source\":{\"type\":\"CONTACT\"}},"
+							+ "\"unstructuredName\":\"Doe, Jane\",\"familyName\":\"Doe\",\"givenName\":\"Jane\"}]}]}",
+					MediaType.APPLICATION_JSON));
+		this.server
+			.expect(requestTo("https://people.googleapis.com/v1/people/contact:updateContact?updatePersonFields=names"))
+			.andExpect(method(HttpMethod.PATCH))
+			.andExpect(header("Authorization", "Bearer access-token"))
+			.andExpect(content()
+				.json("""
+						{"resourceName":"people/contact","etag":"person-etag","metadata":{"sources":[{"type":"CONTACT","etag":"contact-etag"}]},
+						"names":[{"unstructuredName":"Jane Doe","familyName":"Doe","givenName":"Jane"}]}
+						"""))
+			.andRespond(withSuccess());
+
+		GoogleContactNameResult result = this.client.repairCommaFormattedContactNames(ACCOUNT);
+
+		assertThat(result).isEqualTo(new GoogleContactNameResult(1, 1, 0, 0));
+		this.server.verify();
+	}
+
+	@Test
+	void skipsProfileOnlyAndAmbiguousContactNames() {
+		this.server.expect(requestTo("https://oauth2.googleapis.com/token"))
+			.andRespond(withSuccess("{\"access_token\":\"access-token\"}", MediaType.APPLICATION_JSON));
+		this.server
+			.expect(requestTo(
+					"https://people.googleapis.com/v1/people/me/connections?personFields=names,metadata&pageSize=1000"))
+			.andRespond(withSuccess("{\"connections\":["
+					+ "{\"resourceName\":\"people/profile\",\"metadata\":{\"sources\":[{\"type\":\"PROFILE\",\"etag\":\"profile-etag\"}]},"
+					+ "\"names\":[{\"metadata\":{\"source\":{\"type\":\"PROFILE\"}},\"unstructuredName\":\"Doe, Jane\"}]},"
+					+ "{\"resourceName\":\"people/ambiguous\",\"metadata\":{\"sources\":[{\"type\":\"CONTACT\",\"etag\":\"contact-etag\"}]},"
+					+ "\"names\":[{\"metadata\":{\"source\":{\"type\":\"CONTACT\"}},\"unstructuredName\":\"Doe, Jane, PhD\"}]}]}",
+					MediaType.APPLICATION_JSON));
+
+		GoogleContactNameResult result = this.client.repairCommaFormattedContactNames(ACCOUNT);
+
+		assertThat(result).isEqualTo(new GoogleContactNameResult(2, 0, 2, 0));
+		this.server.verify();
+	}
+
 }

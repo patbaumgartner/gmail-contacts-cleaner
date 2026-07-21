@@ -10,6 +10,7 @@ import com.patbaumgartner.contactscleaner.orchestration.AccountCleanupResult;
 import com.patbaumgartner.contactscleaner.orchestration.CleanupRunCompleted;
 import com.patbaumgartner.contactscleaner.orchestration.ContactChange;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
+import com.patbaumgartner.contactscleaner.peopleapi.GoogleContactNameResult;
 import com.patbaumgartner.contactscleaner.peopleapi.GoogleProfilePhotoResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,7 +30,8 @@ class HtmlReportWriterTests {
 		var result = new AccountCleanupResult("personal", true, 42, 1, 0,
 				List.of(new DuplicateCandidate("A", "B", "shared phone number +417912345678")),
 				List.of(change, deletion), new OtherContactsImportResult(4, 2, 1, 1),
-				new GoogleProfilePhotoResult(4, 2, 1, 1), true, 1234, "Cleanup completed");
+				new GoogleProfilePhotoResult(4, 2, 1, 1), true, new GoogleContactNameResult(4, 2, 1, 1), 1234,
+				"Cleanup completed");
 		return new CleanupRunCompleted(Instant.parse("2026-07-20T02:00:00Z"), List.of(result));
 	}
 
@@ -56,6 +58,9 @@ class HtmlReportWriterTests {
 			.contains("contact photos replaced")
 			.contains("contact photos retained")
 			.contains("contact photo updates failed")
+			.contains("Google contact names repaired")
+			.contains("Google contact names retained")
+			.contains("Google contact-name updates failed")
 			.contains("shared phone number +417912345678")
 			// HTML injection from contact data must be escaped
 			.contains("Jane &lt;Doe&gt;")

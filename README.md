@@ -262,6 +262,7 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `contacts-cleaner.accounts[0].enabled` | Participate in runs (default `true`) |
 | `contacts-cleaner.accounts[0].dry-run` | Compute + log changes only (default `false`, **start with `true`**) |
 | `contacts-cleaner.accounts[0].import-other-contacts` | Opt in to promote Google Other contacts before cleanup (default `false`; skipped during dry run) |
+| `contacts-cleaner.accounts[0].repair-google-contact-display-names` | Opt in to repair safe stored `Last, First` names through the People API (default `false`; skipped during dry run) |
 | `contacts-cleaner.accounts[0].oauth-client-id` | OAuth client ID for this account's People API features |
 | `contacts-cleaner.accounts[0].oauth-client-secret` | OAuth client secret for this account's People API features; keep it only in ignored `.env` |
 | `contacts-cleaner.accounts[0].oauth-refresh-token` | Offline OAuth refresh token for this account's People API features; keep it only in ignored `.env` |
@@ -287,6 +288,10 @@ For the complete initial authorization flow and refresh-token recovery instructi
 The HTML report and application logs show discovered, promoted, skipped, and failed
 counts. Skipping is based only on exact normalized e-mail addresses or phone numbers,
 never names.
+
+The direct People API name repair updates only writable contact-source names with an
+unambiguous single comma. It does not modify profile-only or complex names and cannot
+override locale-dependent formatting in the Google Contacts user interface.
 
 ### Preferring Google profile photos
 

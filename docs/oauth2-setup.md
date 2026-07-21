@@ -77,11 +77,15 @@ contacts-cleaner.accounts[0].oauth-client-secret=<CLIENT_SECRET>
 contacts-cleaner.accounts[0].oauth-refresh-token=<REFRESH_TOKEN>
 contacts-cleaner.accounts[0].import-other-contacts=true
 contacts-cleaner.accounts[0].prefer-google-profile-photos=true
+contacts-cleaner.accounts[0].repair-google-contact-display-names=false
 ```
 
 `import-other-contacts` and `prefer-google-profile-photos` are independent. Both are skipped in a dry
-run. The importer needs both scopes: `contacts.other.readonly` to list Other contacts and `contacts` to
-copy them into My Contacts. The photo feature uses the `contacts` scope.
+run. `repair-google-contact-display-names` is also opt-in and default-off; it sequentially repairs only
+safe, writable `Last, First` contact-source names. The importer needs both scopes:
+`contacts.other.readonly` to list Other contacts and `contacts` to copy them into My Contacts. The photo
+and name-repair features use the `contacts` scope. Google may still render a locale-dependent display
+name order in its user interface after a name repair.
 
 Run first with `dry-run=true` to validate the configuration and review the report. Turn off dry-run only
 after reviewing the result.
