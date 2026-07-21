@@ -1,6 +1,7 @@
 package com.patbaumgartner.contactscleaner.peopleapi;
 
 import com.patbaumgartner.contactscleaner.account.GoogleAccount;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +17,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 
 class GooglePeopleApiClientTests {
 
@@ -44,7 +46,8 @@ class GooglePeopleApiClientTests {
 						org.hamcrest.Matchers.containsString("client_secret=client-secret"),
 						org.hamcrest.Matchers.containsString("refresh_token=refresh-token"))))
 			.andRespond(withSuccess("{\"access_token\":\"access-token\"}", MediaType.APPLICATION_JSON));
-		this.server.expect(requestTo("https://people.googleapis.com/v1/otherContacts?readMask=metadata&pageSize=1000"))
+		this.server.expect(requestTo(
+				"https://people.googleapis.com/v1/otherContacts?readMask=metadata,emailAddresses,phoneNumbers&pageSize=1000"))
 			.andExpect(method(HttpMethod.GET))
 			.andExpect(header("Authorization", "Bearer access-token"))
 			.andRespond(withSuccess("{\"otherContacts\":[{\"resourceName\":\"otherContacts/one\"}],"
@@ -57,7 +60,7 @@ class GooglePeopleApiClientTests {
 			.andExpect(content().json("{\"copyMask\":\"names,emailAddresses,phoneNumbers\"}"))
 			.andRespond(withSuccess());
 		this.server.expect(requestTo(
-				"https://people.googleapis.com/v1/otherContacts?readMask=metadata&pageSize=1000&pageToken=next-page"))
+				"https://people.googleapis.com/v1/otherContacts?readMask=metadata,emailAddresses,phoneNumbers&pageSize=1000&pageToken=next-page"))
 			.andExpect(method(HttpMethod.GET))
 			.andRespond(withSuccess("{\"otherContacts\":[{\"resourceName\":\"otherContacts/two\"}]}",
 					MediaType.APPLICATION_JSON));
@@ -70,6 +73,28 @@ class GooglePeopleApiClientTests {
 		OtherContactsImportResult result = this.client.importOtherContacts(ACCOUNT);
 
 		assertThat(result).isEqualTo(new OtherContactsImportResult(2, 2));
+		this.server.verify();
+	}
+
+	@Test
+	void skipsExistingContactsAndContinuesAfterAFailedCopy() {
+		this.server.expect(requestTo("https://oauth2.googleapis.com/token"))
+			.andRespond(withSuccess("{\"access_token\":\"access-token\"}", MediaType.APPLICATION_JSON));
+		this.server.expect(requestTo(
+				"https://people.googleapis.com/v1/otherContacts?readMask=metadata,emailAddresses,phoneNumbers&pageSize=1000"))
+			.andRespond(withSuccess("{\"otherContacts\":["
+					+ "{\"resourceName\":\"otherContacts/existing\",\"emailAddresses\":[{\"value\":\"existing@example.test\"}]},"
+					+ "{\"resourceName\":\"otherContacts/failing\",\"emailAddresses\":[{\"value\":\"failing@example.test\"}]}]}",
+					MediaType.APPLICATION_JSON));
+		this.server
+			.expect(requestTo(
+					"https://people.googleapis.com/v1/otherContacts/failing:copyOtherContactToMyContactsGroup"))
+			.andRespond(withServerError());
+
+		OtherContactsImportResult result = this.client.importOtherContacts(ACCOUNT, Set.of("existing@example.test"),
+				Set.of());
+
+		assertThat(result).isEqualTo(new OtherContactsImportResult(2, 0, 1, 1));
 		this.server.verify();
 	}
 

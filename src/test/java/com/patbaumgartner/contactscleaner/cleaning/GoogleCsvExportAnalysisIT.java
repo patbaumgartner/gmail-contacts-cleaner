@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 import com.patbaumgartner.contactscleaner.orchestration.AccountCleanupResult;
 import com.patbaumgartner.contactscleaner.orchestration.CleanupRunCompleted;
 import com.patbaumgartner.contactscleaner.orchestration.ContactChange;
+import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
 import com.patbaumgartner.contactscleaner.reporting.HtmlReportWriter;
 import com.patbaumgartner.contactscleaner.reporting.ReportProperties;
 import ezvcard.VCard;
@@ -163,7 +164,7 @@ class GoogleCsvExportAnalysisIT {
 		}
 		var duplicates = new DuplicateContactDetector(properties).detect(contacts);
 		var result = new AccountCleanupResult("export-analysis (simulated)", true, contacts.size(), updated, 0,
-				duplicates, changes, true, 0, "Simulated from " + EXPORT);
+				duplicates, changes, OtherContactsImportResult.EMPTY, true, 0, "Simulated from " + EXPORT);
 		new HtmlReportWriter(new ReportProperties(true, "reports"))
 			.onCleanupRunCompleted(new CleanupRunCompleted(java.time.Instant.now(), List.of(result)));
 		section("HTML REPORT written to reports/cleanup-report-latest.html — open it in a browser");

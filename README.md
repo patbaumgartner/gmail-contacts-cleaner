@@ -77,10 +77,13 @@ People API integration can also promote an account's Other contacts into My Cont
 ```
 
 When `import-other-contacts` is enabled for an account, the app first lists its Google
-Other contacts through the People API, copies them sequentially to My Contacts, then
-fetches the normal CardDAV address book and applies the same cleaning rules. Google may
-take time to expose a newly copied contact through CardDAV; delayed entries are cleaned
-on the next run.
+Other contacts through the People API, skips entries whose normalized e-mail address or
+phone number already exists in My Contacts, and copies the remaining entries
+sequentially. An individual failed copy is recorded while the remaining contacts
+continue; no automatic copy retry is attempted because an ambiguous Google failure may
+have completed the copy. It then fetches the normal CardDAV address book and applies the
+same cleaning rules. Google may take time to expose a newly copied contact through
+CardDAV; delayed entries are cleaned on the next run.
 
 Safety first:
 
@@ -277,6 +280,10 @@ contacts; the second authorizes their promotion into My Contacts. Put the OAuth 
 ID, client secret, and refresh token on that account in the ignored `.env`, then set
 `import-other-contacts=true`. The importer only copies names, e-mail addresses, and
 phone numbers because those are the fields Google permits for this operation.
+
+The HTML report and application logs show discovered, promoted, skipped, and failed
+counts. Skipping is based only on exact normalized e-mail addresses or phone numbers,
+never names.
 
 Keep `dry-run=true` for the regular cleaning review, but note that it intentionally
 does not call the People API importer. Enable the import only for a non-dry run once the

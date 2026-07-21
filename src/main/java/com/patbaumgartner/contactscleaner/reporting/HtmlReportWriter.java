@@ -98,6 +98,7 @@ public class HtmlReportWriter {
 			.append(stat(result.updatedContacts(), "updated"))
 			.append(stat(result.deletedContacts(), "deleted"))
 			.append(stat(result.duplicateCandidates().size(), "duplicate candidates"))
+			.append(importStats(result))
 			.append(stat(result.durationMs(), "ms"))
 			.append("</div>");
 
@@ -143,6 +144,17 @@ public class HtmlReportWriter {
 
 	private String stat(long value, String label) {
 		return "<div class=\"stat\"><b>" + value + "</b><span>" + label + "</span></div>";
+	}
+
+	private String importStats(AccountCleanupResult result) {
+		if (result.otherContactsImport()
+			.equals(com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult.EMPTY)) {
+			return "";
+		}
+		var importResult = result.otherContactsImport();
+		return stat(importResult.promoted(), "Other Contacts promoted")
+				+ stat(importResult.skipped(), "Other Contacts skipped")
+				+ stat(importResult.failed(), "Other Contacts failed");
 	}
 
 	private String escape(String value) {

@@ -18,7 +18,10 @@ Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for to
 - **Multiple configurable accounts**, each with `enabled` and `dry-run` flags
 - Optional per-account Google People API import: paginates through **Other contacts**
   and promotes them sequentially to My Contacts before the CardDAV cleaning pass;
-  requires per-account OAuth client credentials and refresh token
+  exact normalized e-mail/phone matches already in My Contacts are skipped, individual
+  copy errors are recorded while the remaining contacts continue, and import counts
+  appear in the HTML report; requires per-account OAuth client credentials and refresh
+  token
 - Nightly built-in scheduler (`server` profile, cron/zone configurable) or one-shot
   startup run for external cron / NAS schedulers
 - **Single-page HTML report** after every run: per-account summary, red/green
