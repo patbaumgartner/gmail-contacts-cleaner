@@ -43,12 +43,29 @@ final class NameRepairRule implements VCardCleaningRule {
 
 	private static final Pattern EMAIL_TOKEN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[A-Za-z]{2,}$");
 
+	private final boolean removeWrappingQuotes;
+
+	private final boolean repairCommaFormattedNames;
+
+	NameRepairRule() {
+		this(true, true);
+	}
+
+	NameRepairRule(boolean removeWrappingQuotes, boolean repairCommaFormattedNames) {
+		this.removeWrappingQuotes = removeWrappingQuotes;
+		this.repairCommaFormattedNames = repairCommaFormattedNames;
+	}
+
 	@Override
 	public boolean apply(VCard vcard) {
 		boolean changed = false;
-		changed |= sanitizeNames(vcard);
+		if (removeWrappingQuotes) {
+			changed |= sanitizeNames(vcard);
+		}
 		changed |= rescueEmailsFromNameFields(vcard);
-		changed |= repairCommaFormattedDisplayName(vcard);
+		if (repairCommaFormattedNames) {
+			changed |= repairCommaFormattedDisplayName(vcard);
+		}
 		changed |= repairAllCapsComponents(vcard);
 		changed |= canonicalizePrefixes(vcard);
 		return changed;

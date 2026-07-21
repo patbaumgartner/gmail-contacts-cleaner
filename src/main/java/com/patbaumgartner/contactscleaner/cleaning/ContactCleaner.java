@@ -49,7 +49,8 @@ public class ContactCleaner {
 			rules.add(new JunkNameSuffixRemovalRule());
 		}
 		if (properties.repairNames()) {
-			rules.add(new NameRepairRule());
+			rules
+				.add(new NameRepairRule(properties.removeWrappingNameQuotes(), properties.repairCommaFormattedNames()));
 		}
 		if (properties.normalizeLabels()) {
 			rules.add(new LabelNormalizationRule());
@@ -146,7 +147,8 @@ public class ContactCleaner {
 	 * @return {@code true} if the contact should be deleted
 	 */
 	public boolean isDeletableEmptyContact(VCard vcard) {
-		return properties.deleteEmptyContacts() && isEmpty(vcard);
+		return (properties.deleteEmptyContacts() && isEmpty(vcard))
+				|| (properties.deleteBirthdayOnlyContacts() && isBirthdayOnly(vcard));
 	}
 
 	/**
@@ -157,6 +159,12 @@ public class ContactCleaner {
 	 */
 	private boolean isEmpty(VCard vcard) {
 		return vcard.getTelephoneNumbers().isEmpty() && vcard.getEmails().isEmpty() && vcard.getBirthday() == null
+				&& vcard.getAddresses().isEmpty() && vcard.getUrls().isEmpty() && vcard.getNotes().isEmpty()
+				&& vcard.getOrganizations().isEmpty();
+	}
+
+	private boolean isBirthdayOnly(VCard vcard) {
+		return vcard.getBirthday() != null && vcard.getTelephoneNumbers().isEmpty() && vcard.getEmails().isEmpty()
 				&& vcard.getAddresses().isEmpty() && vcard.getUrls().isEmpty() && vcard.getNotes().isEmpty()
 				&& vcard.getOrganizations().isEmpty();
 	}

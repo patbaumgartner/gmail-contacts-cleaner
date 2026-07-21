@@ -61,6 +61,55 @@ class ContactCleanerTests {
 	}
 
 	@Test
+	void deletesBirthdayOnlyContactsWhenEnabled() {
+		ContactCleaner cleaner = new ContactCleaner(defaults().withDeleteBirthdayOnlyContacts(true));
+		VCard vcard = new VCard();
+		vcard.setBirthday(new ezvcard.property.Birthday(java.time.LocalDate.of(1980, 3, 12)));
+
+		assertThat(cleaner.clean(vcard).empty()).isTrue();
+	}
+
+	@Test
+	void keepsBirthdayContactsThatAlsoHaveAnEmailAddress() {
+		ContactCleaner cleaner = new ContactCleaner(defaults().withDeleteBirthdayOnlyContacts(true));
+		VCard vcard = new VCard();
+		vcard.setBirthday(new ezvcard.property.Birthday(java.time.LocalDate.of(1980, 3, 12)));
+		vcard.addEmail(new Email("jane@example.com"));
+
+		assertThat(cleaner.clean(vcard).empty()).isFalse();
+	}
+
+	@Test
+	void independentlyDisablesQuoteAndCommaNameRepairs() {
+		ContactCleaner cleaner = new ContactCleaner(defaults().withNameRepairOptions(false, false));
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new ezvcard.property.FormattedName("\"Muster, Max\""));
+
+		assertThat(cleaner.clean(vcard).changed()).isFalse();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("\"Muster, Max\"");
+	}
+
+	@Test
+	void canDisableOnlyQuoteRemoval() {
+		ContactCleaner cleaner = new ContactCleaner(defaults().withNameRepairOptions(false, true));
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new ezvcard.property.FormattedName("\"Jane Doe\""));
+
+		assertThat(cleaner.clean(vcard).changed()).isFalse();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("\"Jane Doe\"");
+	}
+
+	@Test
+	void canDisableOnlyCommaNameRepair() {
+		ContactCleaner cleaner = new ContactCleaner(defaults().withNameRepairOptions(true, false));
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new ezvcard.property.FormattedName("Muster, Max"));
+
+		assertThat(cleaner.clean(vcard).changed()).isFalse();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Muster, Max");
+	}
+
+	@Test
 	void contactWithOnlyANoteIsNotEmpty() {
 		ContactCleaner cleaner = new ContactCleaner(defaults().withDestructiveOptions(false, true));
 		VCard vcard = new VCard();
