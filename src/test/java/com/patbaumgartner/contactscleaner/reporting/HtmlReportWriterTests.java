@@ -9,6 +9,7 @@ import com.patbaumgartner.contactscleaner.cleaning.DuplicateCandidate;
 import com.patbaumgartner.contactscleaner.orchestration.AccountCleanupResult;
 import com.patbaumgartner.contactscleaner.orchestration.CleanupRunCompleted;
 import com.patbaumgartner.contactscleaner.orchestration.ContactChange;
+import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,7 +27,7 @@ class HtmlReportWriterTests {
 				List.of());
 		var result = new AccountCleanupResult("personal", true, 42, 1, 0,
 				List.of(new DuplicateCandidate("A", "B", "shared phone number +417912345678")),
-				List.of(change, deletion), true, 1234, "Cleanup completed");
+				List.of(change, deletion), new OtherContactsImportResult(4, 2, 1, 1), true, 1234, "Cleanup completed");
 		return new CleanupRunCompleted(Instant.parse("2026-07-20T02:00:00Z"), List.of(result));
 	}
 
@@ -47,6 +48,9 @@ class HtmlReportWriterTests {
 			.contains("personal")
 			.contains("TEL +41446681800")
 			.contains("Ghost Contact")
+			.contains("Other Contacts promoted")
+			.contains("Other Contacts skipped")
+			.contains("Other Contacts failed")
 			.contains("shared phone number +417912345678")
 			// HTML injection from contact data must be escaped
 			.contains("Jane &lt;Doe&gt;")

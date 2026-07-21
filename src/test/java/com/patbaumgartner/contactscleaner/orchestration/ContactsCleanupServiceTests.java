@@ -27,8 +27,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -156,16 +158,17 @@ class ContactsCleanupServiceTests {
 	}
 
 	@Test
-	void importsOtherContactsBeforeFetchingAndCleaning() {
+	void importsOtherContactsAfterTakingACardDavSnapshot() {
 		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, false, true,
 				"client-id", "client-secret", "refresh-token");
-		when(this.otherContactsClient.importOtherContacts(account)).thenReturn(new OtherContactsImportResult(2, 2));
+		when(this.otherContactsClient.importOtherContacts(eq(account), anySet(), anySet()))
+			.thenReturn(new OtherContactsImportResult(2, 1, 1, 0));
 		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
 
 		service(account, false).cleanAllAccounts();
 
-		verify(this.otherContactsClient).importOtherContacts(account);
-		verify(this.cardDavClient).fetchAllContacts(account);
+		verify(this.otherContactsClient).importOtherContacts(eq(account), anySet(), anySet());
+		verify(this.cardDavClient, times(2)).fetchAllContacts(account);
 	}
 
 	@Test
@@ -176,7 +179,7 @@ class ContactsCleanupServiceTests {
 
 		service(account, false).cleanAllAccounts();
 
-		verify(this.otherContactsClient, never()).importOtherContacts(any());
+		verify(this.otherContactsClient, never()).importOtherContacts(any(), anySet(), anySet());
 	}
 
 	@Test
