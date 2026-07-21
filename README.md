@@ -97,6 +97,7 @@ Safety first:
 | Phone type correction | `079…` labeled "Work" → gains `CELL`; landline wrongly marked mobile → fixed (ambiguous plans untouched) | ✅ on |
 | E-mail normalization | ` Jane.Doe@GMAIL.com ` → `jane.doe@gmail.com` | ✅ on |
 | Duplicate e-mail removal | keeps the first occurrence | ✅ on |
+| E-mail name inference | missing first/last names + `jane.doe@…` or `jane_doe@…` → `Jane Doe`; conflicting or multi-part local parts are left alone | ✅ on |
 | Name trimming | `" Jane  Doe "` → `"Jane Doe"` | ✅ on |
 | Junk name-suffix removal | `(JIRA)`, `(whatsapp)` import fragments dropped; `Jr.`/`PMP` kept | ✅ on |
 | Name repair | `JANE DOE` → `Jane Doe` (`McDonald`/`van der` aware), `Muster, Max` → `Max Muster`, quotes/emojis/invisible chars stripped from all name parts, `Dr` → `Dr.`, e-mail in name field → moved to e-mails | ✅ on |
@@ -263,6 +264,7 @@ Add more accounts as `contacts-cleaner.accounts[1].*`,
 | `CONTACTS_CLEANER_CORRECT_PHONE_TYPES` | `true` | Verify mobile/landline type against the numbering plan |
 | `CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES` | `true` | Lower-case + trim |
 | `CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES` | `true` | Deduplicate per contact |
+| `CONTACTS_CLEANER_INFER_NAMES_FROM_EMAIL_ADDRESSES` | `true` | Fill missing first/last names from unambiguous `first.last` or `first_last` e-mails |
 | `CONTACTS_CLEANER_TRIM_NAMES` | `true` | Trim name whitespace |
 | `CONTACTS_CLEANER_REMOVE_JUNK_NAME_SUFFIXES` | `true` | Drop parenthesized import junk from name suffixes |
 | `CONTACTS_CLEANER_REPAIR_NAMES` | `true` | ALL-CAPS repair, prefix canonicalization, e-mail-in-name rescue |

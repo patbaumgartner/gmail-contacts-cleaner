@@ -48,7 +48,7 @@ class ContactsCleanupServiceTests {
 			VERSION:3.0
 			FN:Jane Doe
 			TEL:+41446681800
-			EMAIL:jane.doe@gmail.com
+			EMAIL:contact@gmail.com
 			END:VCARD
 			""";
 

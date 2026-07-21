@@ -114,6 +114,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * (<strong>destructive</strong>, off by default)
  * @param deleteBirthdayOnlyContacts delete contacts that have a birthday but no other
  * contact data beyond their name (<strong>destructive</strong>, off by default)
+ * @param inferNamesFromEmailAddresses populate missing given/family names from an
+ * unambiguous {@code first.last} or {@code first_last} e-mail local part
  */
 @ConfigurationProperties(prefix = "contacts-cleaner.cleaning")
 public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNumbers,
@@ -137,7 +139,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		@DefaultValue("true") boolean canonicalizeOrganizations,
 		@DefaultValue("false") boolean removeSharedPhoneNumbers, @DefaultValue("2") int sharedPhoneNumberThreshold,
 		@DefaultValue("false") boolean removeNotes, @DefaultValue("false") boolean deleteEmptyContacts,
-		@DefaultValue("false") boolean deleteBirthdayOnlyContacts){
+		@DefaultValue("false") boolean deleteBirthdayOnlyContacts,
+		@DefaultValue("true") boolean inferNamesFromEmailAddresses){
 
 	@ConstructorBinding
 	public CleaningProperties {
@@ -168,7 +171,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeInstantMessengers,
 				removeCustomFields, removeOrganizations, removeAdditionalOrganizations, removeSelfOrganizations,
 				removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold,
-				removeNotes, deleteEmptyContacts, false);
+				removeNotes, deleteEmptyContacts, false, true);
 	}
 
 	/**
@@ -179,7 +182,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	public static CleaningProperties defaults() {
 		return new CleaningProperties(true, "", true, true, false, false, true, true, true, false, true, true, true,
 				true, true, true, true, true, true, true, true, true, true, true, true, List.of("Age", "Photo"),
-				List.of(), false, true, true, true, false, 2, false, false, false);
+				List.of(), false, true, true, true, false, 2, false, false, false, true);
 	}
 
 	/**
@@ -198,7 +201,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
 				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
 				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
-				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts);
+				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
+				inferNamesFromEmailAddresses);
 	}
 
 	/**
@@ -215,7 +219,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
 				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
 				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
-				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts);
+				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
+				inferNamesFromEmailAddresses);
 	}
 
 	/**
@@ -233,7 +238,8 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
 				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
 				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
-				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts);
+				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
+				inferNamesFromEmailAddresses);
 	}
 
 	/**
@@ -250,6 +256,26 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
 				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
 				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
-				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts);
+				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
+				inferNamesFromEmailAddresses);
+	}
+
+	/**
+	 * Returns a copy with e-mail-based structured-name inference enabled or disabled.
+	 * @param inferNamesFromEmailAddresses infer missing names from {@code first.last}
+	 * e-mails
+	 * @return updated cleaning properties
+	 */
+	public CleaningProperties withEmailNameInference(boolean inferNamesFromEmailAddresses) {
+		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
+				correctPhoneTypes, removeFaxNumbers, removeInvalidPhoneNumbers, normalizeEmailAddresses,
+				removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains, trimNames,
+				removeJunkNameSuffixes, repairNames, removeWrappingNameQuotes, repairCommaFormattedNames,
+				normalizeLabels, removeEmptyProperties, removeRedundantAddresses, removeGeoCoordinateAddresses,
+				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
+				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
+				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
+				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
+				inferNamesFromEmailAddresses);
 	}
 }
