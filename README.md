@@ -285,6 +285,15 @@ The HTML report and application logs show discovered, promoted, skipped, and fai
 counts. Skipping is based only on exact normalized e-mail addresses or phone numbers,
 never names.
 
+### Preferring Google profile photos
+
+Set `prefer-google-profile-photos=true` on an account to remove a contact-specific
+photo only when the People API returns a non-default Google Account or Workspace
+profile photo for the same person. Google then displays its profile photo. Contacts
+without such a profile photo keep their existing contact-specific image. This action is
+skipped during dry runs and requires the same OAuth settings and
+`https://www.googleapis.com/auth/contacts` scope as the Other contacts importer.
+
 Keep `dry-run=true` for the regular cleaning review, but note that it intentionally
 does not call the People API importer. Enable the import only for a non-dry run once the
 OAuth configuration is ready.

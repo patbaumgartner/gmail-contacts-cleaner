@@ -22,6 +22,8 @@ import com.patbaumgartner.contactscleaner.cleaning.OrganizationCanonicalizer;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsClient;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
+import com.patbaumgartner.contactscleaner.peopleapi.ContactPhotoClient;
+import com.patbaumgartner.contactscleaner.peopleapi.GoogleProfilePhotoResult;
 import ezvcard.Ezvcard;
 import ezvcard.VCard;
 import ezvcard.VCardVersion;
@@ -60,6 +62,8 @@ public class ContactsCleanupService {
 
 	private final OtherContactsClient otherContactsClient;
 
+	private final ContactPhotoClient contactPhotoClient;
+
 	private final ContactCleaner contactCleaner;
 
 	private final DuplicateContactDetector duplicateContactDetector;
@@ -76,13 +80,14 @@ public class ContactsCleanupService {
 	private final AtomicBoolean runInProgress = new AtomicBoolean(false);
 
 	ContactsCleanupService(AccountsProperties accountsProperties, CardDavClient cardDavClient,
-			OtherContactsClient otherContactsClient, ContactCleaner contactCleaner,
-			DuplicateContactDetector duplicateContactDetector, SharedPhoneNumberRemover sharedPhoneNumberRemover,
-			EmailDomainVerifier emailDomainVerifier, OrganizationCanonicalizer organizationCanonicalizer,
-			ApplicationEventPublisher eventPublisher) {
+			OtherContactsClient otherContactsClient, ContactPhotoClient contactPhotoClient,
+			ContactCleaner contactCleaner, DuplicateContactDetector duplicateContactDetector,
+			SharedPhoneNumberRemover sharedPhoneNumberRemover, EmailDomainVerifier emailDomainVerifier,
+			OrganizationCanonicalizer organizationCanonicalizer, ApplicationEventPublisher eventPublisher) {
 		this.accountsProperties = accountsProperties;
 		this.cardDavClient = cardDavClient;
 		this.otherContactsClient = otherContactsClient;
+		this.contactPhotoClient = contactPhotoClient;
 		this.contactCleaner = contactCleaner;
 		this.duplicateContactDetector = duplicateContactDetector;
 		this.sharedPhoneNumberRemover = sharedPhoneNumberRemover;
@@ -122,13 +127,22 @@ public class ContactsCleanupService {
 	private AccountCleanupResult cleanAccount(GoogleAccount account) {
 		long start = System.currentTimeMillis();
 		OtherContactsImportResult otherContactsImport = OtherContactsImportResult.EMPTY;
+		GoogleProfilePhotoResult googleProfilePhotos = GoogleProfilePhotoResult.EMPTY;
 		log.info("Starting cleanup for account '{}'{}", account.name(), account.dryRun() ? " (dry run)" : "");
 		try {
 			List<AddressBookEntry> entries = cardDavClient.fetchAllContacts(account);
+			boolean refreshEntries = false;
 			if (importsOtherContacts(account)) {
 				otherContactsImport = importOtherContacts(account, entries);
+				refreshEntries = true;
+			}
+			if (prefersGoogleProfilePhotos(account)) {
+				googleProfilePhotos = preferGoogleProfilePhotos(account);
+				refreshEntries = true;
+			}
+			if (refreshEntries) {
 				// People API writes can take time to appear, but a second CardDAV read
-				// cleans contacts that are already visible in the same run.
+				// avoids restoring stale vCard photos during the cleanup write pass.
 				entries = cardDavClient.fetchAllContacts(account);
 			}
 
@@ -187,12 +201,13 @@ public class ContactsCleanupService {
 					account.name(), entries.size(), updated, deleted, duplicates.size(), duration,
 					account.dryRun() ? " (dry run — nothing written)" : "");
 			return new AccountCleanupResult(account.name(), true, entries.size(), updated, deleted, duplicates, changes,
-					otherContactsImport, account.dryRun(), duration, "Cleanup completed");
+					otherContactsImport, googleProfilePhotos, account.dryRun(), duration, "Cleanup completed");
 		}
 		catch (RuntimeException ex) {
 			long duration = System.currentTimeMillis() - start;
 			log.error("Cleanup failed for account '{}' after {}ms", account.name(), duration, ex);
-			return AccountCleanupResult.failure(account.name(), otherContactsImport, duration, ex.getMessage());
+			return AccountCleanupResult.failure(account.name(), otherContactsImport, googleProfilePhotos, duration,
+					ex.getMessage());
 		}
 	}
 
@@ -212,6 +227,26 @@ public class ContactsCleanupService {
 				existingPhones(entries));
 		log.info("Other contacts import for account '{}': {} discovered, {} promoted, {} skipped, {} failed",
 				account.name(), result.discovered(), result.promoted(), result.skipped(), result.failed());
+		return result;
+	}
+
+	private boolean prefersGoogleProfilePhotos(GoogleAccount account) {
+		if (!account.preferGoogleProfilePhotos()) {
+			return false;
+		}
+		if (account.dryRun()) {
+			log.info("[dry run] Skipping Google profile photo preference for account '{}'", account.name());
+			return false;
+		}
+		return true;
+	}
+
+	private GoogleProfilePhotoResult preferGoogleProfilePhotos(GoogleAccount account) {
+		GoogleProfilePhotoResult result = contactPhotoClient.preferGoogleProfilePhotos(account);
+		log.info(
+				"Google profile photo preference for account '{}': {} scanned, {} contact photos removed, {} skipped, "
+						+ "{} failed",
+				account.name(), result.scanned(), result.removed(), result.skipped(), result.failed());
 		return result;
 	}
 

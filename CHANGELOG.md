@@ -22,6 +22,9 @@ Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for to
   copy errors are recorded while the remaining contacts continue, and import counts
   appear in the HTML report; requires per-account OAuth client credentials and refresh
   token
+- Optional per-account Google profile photo preference: when a regular contact has both
+  a contact-specific photo and a non-default Google Account or Workspace profile photo,
+  removes the contact-specific image so Google shows the profile image instead
 - Nightly built-in scheduler (`server` profile, cron/zone configurable) or one-shot
   startup run for external cron / NAS schedulers
 - **Single-page HTML report** after every run: per-account summary, red/green

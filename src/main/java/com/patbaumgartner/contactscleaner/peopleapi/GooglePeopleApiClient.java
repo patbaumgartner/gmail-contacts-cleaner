@@ -8,6 +8,7 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.patbaumgartner.contactscleaner.account.GoogleAccount;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -19,19 +20,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * People API client for promoting Other contacts. CardDAV does not expose this
- * collection.
+ * People API client for account-specific contact operations unavailable through CardDAV.
  */
 @Component
-class GooglePeopleApiClient implements OtherContactsClient {
+class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 
 	private static final String COPY_MASK = "names,emailAddresses,phoneNumbers";
+
+	private static final long PHOTO_DELETE_INTERVAL_MS = 800;
 
 	private static final Logger log = LoggerFactory.getLogger(GooglePeopleApiClient.class);
 
 	private final RestClient restClient;
 
 	private final PeopleApiProperties properties;
+
+	private long nextPhotoDeleteAt;
 
 	GooglePeopleApiClient(@Qualifier("peopleApiRestClient") RestClient peopleApiRestClient,
 			PeopleApiProperties properties) {
@@ -79,6 +83,12 @@ class GooglePeopleApiClient implements OtherContactsClient {
 				log.info("Other contacts import progress: {} discovered, {} promoted, {} skipped, {} failed",
 						discovered, promoted, skipped, failed);
 				pageToken = page.nextPageToken();
+				if ((pageToken == null || pageToken.isBlank()) && page.totalSize() != null
+						&& discovered < page.totalSize()) {
+					log.warn(
+							"Google reported {} Other contacts but returned only {} without a continuation token for account '{}'",
+							page.totalSize(), discovered, account.name());
+				}
 			}
 			while (pageToken != null && !pageToken.isBlank());
 			return new OtherContactsImportResult(discovered, promoted, skipped, failed);
@@ -86,6 +96,68 @@ class GooglePeopleApiClient implements OtherContactsClient {
 		catch (RestClientException ex) {
 			throw new OtherContactsException(
 					"Failed to import Other contacts for account '%s'".formatted(account.name()), ex);
+		}
+	}
+
+	@Override
+	public GoogleProfilePhotoResult preferGoogleProfilePhotos(GoogleAccount account) {
+		validateOAuthCredentials(account);
+		try {
+			String accessToken = refreshAccessToken(account);
+			int scanned = 0;
+			int removed = 0;
+			int skipped = 0;
+			int failed = 0;
+			String pageToken = null;
+			do {
+				ConnectionsPage page = listConnections(accessToken, pageToken);
+				List<Person> contacts = (page.connections() != null) ? page.connections() : List.of();
+				for (Person contact : contacts) {
+					scanned++;
+					if (!hasContactPhotoAndGoogleProfilePhoto(contact)) {
+						skipped++;
+						continue;
+					}
+					try {
+						throttlePhotoDeletes();
+						deleteContactPhoto(accessToken, contact.resourceName());
+						removed++;
+					}
+					catch (HttpClientErrorException.NotFound ex) {
+						skipped++;
+						log.debug("Contact-specific photo for '{}' was already absent", contact.resourceName());
+					}
+					catch (HttpClientErrorException.TooManyRequests ex) {
+						failed++;
+						log.warn(
+								"Google rate-limited profile photo updates for account '{}' after {} removals; "
+										+ "stopping this pass to avoid further failed requests",
+								account.name(), removed);
+						return new GoogleProfilePhotoResult(scanned, removed, skipped, failed);
+					}
+					catch (RestClientException ex) {
+						failed++;
+						log.warn("Could not remove contact-specific photo for '{}' — continuing without retry",
+								contact.resourceName(), ex);
+					}
+				}
+				log.info("Google profile photo progress: {} scanned, {} contact photos removed, {} skipped, {} failed",
+						scanned, removed, skipped, failed);
+				pageToken = page.nextPageToken();
+			}
+			while (pageToken != null && !pageToken.isBlank());
+			return new GoogleProfilePhotoResult(scanned, removed, skipped, failed);
+		}
+		catch (RestClientException ex) {
+			throw new OtherContactsException(
+					"Failed to prefer Google profile photos for account '%s'".formatted(account.name()), ex);
+		}
+	}
+
+	private void validateOAuthCredentials(GoogleAccount account) {
+		if (!account.hasOtherContactsImportCredentials()) {
+			throw new OtherContactsException("People API access for account '%s' requires OAuth client ID, "
+					+ "client secret, and refresh token".formatted(account.name()));
 		}
 	}
 
@@ -117,6 +189,27 @@ class GooglePeopleApiClient implements OtherContactsClient {
 			}
 			return builder.build();
 		}).headers((headers) -> headers.setBearerAuth(accessToken)).retrieve().body(OtherContactsPage.class);
+	}
+
+	private ConnectionsPage listConnections(String accessToken, String pageToken) {
+		return restClient.get().uri((builder) -> {
+			builder.path("/v1/people/me/connections")
+				.queryParam("personFields", "photos,metadata")
+				.queryParam("pageSize", 1000);
+			if (pageToken != null) {
+				builder.queryParam("pageToken", pageToken);
+			}
+			return builder.build();
+		}).headers((headers) -> headers.setBearerAuth(accessToken)).retrieve().body(ConnectionsPage.class);
+	}
+
+	private boolean hasContactPhotoAndGoogleProfilePhoto(Person contact) {
+		boolean hasContactPhoto = contact.photos().stream().anyMatch((photo) -> photo.sourceType().equals("CONTACT"));
+		boolean hasGoogleProfilePhoto = contact.photos()
+			.stream()
+			.anyMatch((photo) -> !Boolean.TRUE.equals(photo.defaultPhoto())
+					&& (photo.sourceType().equals("PROFILE") || photo.sourceType().equals("DOMAIN_PROFILE")));
+		return hasContactPhoto && hasGoogleProfilePhoto;
 	}
 
 	private boolean matchesRegularContact(Person contact, Set<String> knownEmails, Set<String> knownPhones) {
@@ -172,20 +265,50 @@ class GooglePeopleApiClient implements OtherContactsClient {
 			.toBodilessEntity();
 	}
 
+	private void deleteContactPhoto(String accessToken, String resourceName) {
+		if (resourceName == null || resourceName.isBlank()) {
+			throw new OtherContactsException("People API returned a contact without a resource name");
+		}
+		restClient.delete()
+			.uri((builder) -> builder.path("/v1/").path(resourceName).path(":deleteContactPhoto").build())
+			.headers((headers) -> headers.setBearerAuth(accessToken))
+			.retrieve()
+			.toBodilessEntity();
+	}
+
+	private synchronized void throttlePhotoDeletes() {
+		long delay = nextPhotoDeleteAt - System.currentTimeMillis();
+		if (delay > 0) {
+			try {
+				Thread.sleep(delay);
+			}
+			catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+				throw new OtherContactsException("Interrupted while throttling Google profile photo updates", ex);
+			}
+		}
+		nextPhotoDeleteAt = System.currentTimeMillis() + PHOTO_DELETE_INTERVAL_MS;
+	}
+
 	private record TokenResponse(@JsonProperty("access_token") String accessToken) {
 	}
 
 	private record OtherContactsPage(@JsonProperty("otherContacts") List<Person> otherContacts,
+			@JsonProperty("nextPageToken") String nextPageToken, @JsonProperty("totalSize") Integer totalSize) {
+	}
+
+	private record ConnectionsPage(@JsonProperty("connections") List<Person> connections,
 			@JsonProperty("nextPageToken") String nextPageToken) {
 	}
 
 	private record Person(@JsonProperty("resourceName") String resourceName,
 			@JsonProperty("emailAddresses") List<EmailAddress> emailAddresses,
-			@JsonProperty("phoneNumbers") List<PhoneNumber> phoneNumbers) {
+			@JsonProperty("phoneNumbers") List<PhoneNumber> phoneNumbers, @JsonProperty("photos") List<Photo> photos) {
 
 		private Person {
 			emailAddresses = (emailAddresses != null) ? List.copyOf(emailAddresses) : List.of();
 			phoneNumbers = (phoneNumbers != null) ? List.copyOf(phoneNumbers) : List.of();
+			photos = (photos != null) ? List.copyOf(photos) : List.of();
 		}
 	}
 
@@ -193,6 +316,21 @@ class GooglePeopleApiClient implements OtherContactsClient {
 	}
 
 	private record PhoneNumber(@JsonProperty("value") String value) {
+	}
+
+	private record Photo(@JsonProperty("metadata") PhotoMetadata metadata,
+			@JsonProperty("default") Boolean defaultPhoto) {
+
+		private String sourceType() {
+			return (metadata != null && metadata.source() != null && metadata.source().type() != null)
+					? metadata.source().type() : "";
+		}
+	}
+
+	private record PhotoMetadata(@JsonProperty("source") PhotoSource source) {
+	}
+
+	private record PhotoSource(@JsonProperty("type") String type) {
 	}
 
 	private record CopyOtherContactRequest(@JsonProperty("copyMask") String copyMask) {
