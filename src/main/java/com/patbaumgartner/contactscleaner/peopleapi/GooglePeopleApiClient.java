@@ -276,8 +276,17 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 			.toBodilessEntity();
 	}
 
-	private synchronized void throttlePhotoDeletes() {
-		long delay = nextPhotoDeleteAt - System.currentTimeMillis();
+	private void throttlePhotoDeletes() {
+		long delay;
+		synchronized (this) {
+			long now = System.currentTimeMillis();
+			delay = nextPhotoDeleteAt - now;
+			nextPhotoDeleteAt = Math.max(nextPhotoDeleteAt, now) + PHOTO_DELETE_INTERVAL_MS;
+		}
+		waitForPhotoDeleteSlot(delay);
+	}
+
+	private void waitForPhotoDeleteSlot(long delay) {
 		if (delay > 0) {
 			try {
 				Thread.sleep(delay);
@@ -287,7 +296,6 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient {
 				throw new OtherContactsException("Interrupted while throttling Google profile photo updates", ex);
 			}
 		}
-		nextPhotoDeleteAt = System.currentTimeMillis() + PHOTO_DELETE_INTERVAL_MS;
 	}
 
 	private record TokenResponse(@JsonProperty("access_token") String accessToken) {
