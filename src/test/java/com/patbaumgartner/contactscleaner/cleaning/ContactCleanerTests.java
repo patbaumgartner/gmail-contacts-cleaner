@@ -120,6 +120,18 @@ class ContactCleanerTests {
 	}
 
 	@Test
+	void removesConfiguredEmailDomainsAfterNormalization() {
+		ContactCleaner cleaner = new ContactCleaner(
+				defaults().withEmailDomainRemoval(java.util.List.of("former.example")));
+		VCard vcard = new VCard();
+		vcard.addEmail(new Email("Jane@FORMER.EXAMPLE"));
+		vcard.addEmail(new Email("jane@example.com"));
+
+		assertThat(cleaner.clean(vcard).changed()).isTrue();
+		assertThat(vcard.getEmails()).extracting(Email::getValue).containsExactly("jane@example.com");
+	}
+
+	@Test
 	void contactWithOnlyANoteIsNotEmpty() {
 		ContactCleaner cleaner = new ContactCleaner(defaults().withDestructiveOptions(false, true));
 		VCard vcard = new VCard();

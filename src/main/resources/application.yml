@@ -88,6 +88,8 @@ contacts-cleaner:
     remove-geo-coordinate-addresses: "${CONTACTS_CLEANER_REMOVE_GEO_COORDINATE_ADDRESSES:true}"
     normalize-email-addresses: "${CONTACTS_CLEANER_NORMALIZE_EMAIL_ADDRESSES:true}"
     remove-duplicate-email-addresses: "${CONTACTS_CLEANER_REMOVE_DUPLICATE_EMAIL_ADDRESSES:true}"
+    # Drop e-mails at configured former-employer domains (comma-separated). Empty disables it.
+    remove-email-domains: "${CONTACTS_CLEANER_REMOVE_EMAIL_DOMAINS:}"
     # Drop e-mail addresses that are not syntactically valid (missing @, no TLD).
     remove-invalid-emails: "${CONTACTS_CLEANER_REMOVE_INVALID_EMAILS:true}"
     # Resolve mail domains via DNS and drop addresses whose domain no longer exists

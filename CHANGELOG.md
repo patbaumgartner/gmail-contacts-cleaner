@@ -4,16 +4,6 @@ All notable changes to this project are documented in this file. The format is b
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-- Name repair sanitizes every name component: boundary quotes (even one-sided
-  strays, typographic variants included), emojis and invisible characters are
-  removed, whitespace collapsed; inner nickname quotes are preserved
-- Missing given/family name components are inferred before normalization from an
-  unambiguous `first.last` or `first_last` e-mail local part
-
 ## [1.0.0] - 2026-07-20
 
 Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for today's Google.
@@ -76,9 +66,17 @@ Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for to
 - Label normalization extended to URL labels; orphaned `X-ABLabel`s are swept
 - Junk name-suffix removal (on by default): parenthesized messenger-import
   fragments like `(JIRA)` are dropped, honorific suffixes are kept
-- Name repair (`repair-names`, on by default): ALL-CAPS names get smart casing
-  (`McDonald`/`O'Brien`/`van der` aware), known prefixes are canonicalized
-  (`Dr` → `Dr.`), e-mail addresses stuck in name fields are moved to e-mails
+- Name repair (`repair-names`, on by default): all-uppercase given/family names
+  get smart casing (`MCDONALD` → `McDonald`) while existing inner capitals are
+  preserved; known prefixes are canonicalized (`Dr` → `Dr.`), and e-mail
+  addresses stuck in name fields are moved to e-mails
+- Name repair sanitizes every name component: boundary quotes (even one-sided
+  strays, typographic variants included), emojis and invisible characters are
+  removed, whitespace collapsed; inner nickname quotes are preserved
+- Name repair simplifies a trailing `Name (name@example.com)` display-name
+  suffix, promoting the e-mail and an unambiguous two-part name to vCard fields
+- Missing given/family name components are inferred before normalization from an
+  unambiguous `first.last` or `first_last` e-mail local part
 - Phone type correction (`correct-phone-types`, on by default): mobile/landline
   classification verified against the numbering plan via libphonenumber
 - Label normalization covers e-mail, phone and address labels (`Mobil` → CELL,
@@ -99,6 +97,8 @@ Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for to
   (`Age`, `Other Organizations`) to sync clients — one-time CSV cleanup required
 
 **Cleaning rules (destructive, opt-in)**
+- E-mail removal for configured former-employer domains, including subdomains
+  while preserving lookalike domains
 - Country-invalid phone number removal (libphonenumber validation)
 - Shared phone number removal (numbers on ≥ 2 contacts = switchboard/household line)
 - DNS-verified e-mail domain check (removes addresses only on authoritative NXDOMAIN)

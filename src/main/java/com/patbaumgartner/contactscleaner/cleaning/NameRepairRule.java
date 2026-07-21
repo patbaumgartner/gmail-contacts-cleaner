@@ -3,7 +3,6 @@ package com.patbaumgartner.contactscleaner.cleaning;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -12,14 +11,14 @@ import ezvcard.property.FormattedName;
 import ezvcard.property.StructuredName;
 
 /**
- * Repairs structurally broken names — three well-defined defects, each fixed only when
- * the defect is unambiguous:
+ * Repairs structurally broken names — well-defined defects, each fixed only when the
+ * defect is unambiguous:
  *
  * <ol>
- * <li><strong>ALL-CAPS names</strong> — {@code "JANE DOE"} becomes {@code "Jane Doe"}
- * with smart casing: nobility particles stay lowercase ({@code van der}, {@code von}),
- * {@code McDonald}, {@code MacLeod} and {@code O'Brien} keep their inner capitals,
- * hyphenated names capitalize both parts. Mixed-case names are never touched.</li>
+ * <li><strong>Given and family name casing</strong> — all-uppercase components get smart
+ * casing ({@code "MCDONALD"} becomes {@code "McDonald"}), while components that already
+ * start upper-case retain intentional inner capitals ({@code "O'Brien"},
+ * {@code "Jean-Luc"}).</li>
  * <li><strong>Prefix canonicalization</strong> — {@code Dr} → {@code Dr.}, {@code Prof} →
  * {@code Prof.} (known honorifics only).</li>
  * <li><strong>Quoted names</strong> — {@code "\"Jane Doe\""} loses its wrapping quotes
@@ -27,6 +26,10 @@ import ezvcard.property.StructuredName;
  * <li><strong>"Last, First" display names</strong> — {@code "Muster, Max"} becomes
  * {@code "Max Muster"}; the comma convention is unambiguous, and empty given/family
  * fields are populated from the parts.</li>
+ * <li><strong>Display-name e-mail suffixes</strong> — {@code "Jane Doe
+ * (jane.doe@example.com)"} becomes {@code "Jane Doe"}; the e-mail is moved to the
+ * contact's e-mails and an unambiguous two-part display name fills missing given/family
+ * fields.</li>
  * <li><strong>E-mail addresses stuck in name fields</strong> — the address is moved to
  * the contact's e-mails (if not already there) and removed from the name; a contact left
  * nameless gets a readable name derived from the local part ({@code jane.doe@…} →
@@ -42,6 +45,9 @@ final class NameRepairRule implements VCardCleaningRule {
 			"mag", "Mag.", "med", "med.");
 
 	private static final Pattern EMAIL_TOKEN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[A-Za-z]{2,}$");
+
+	private static final Pattern DISPLAY_NAME_EMAIL_SUFFIX = Pattern
+		.compile("^(.+?)\\s*\\(([^()\\s]+@[^()\\s]+\\.[A-Za-z]{2,})\\)\\s*$");
 
 	private final boolean removeWrappingQuotes;
 
@@ -66,7 +72,7 @@ final class NameRepairRule implements VCardCleaningRule {
 		if (repairCommaFormattedNames) {
 			changed |= repairCommaFormattedDisplayName(vcard);
 		}
-		changed |= repairAllCapsComponents(vcard);
+		changed |= normalizeStructuredNameCase(vcard);
 		changed |= canonicalizePrefixes(vcard);
 		return changed;
 	}
@@ -213,9 +219,18 @@ final class NameRepairRule implements VCardCleaningRule {
 			}
 		}
 		FormattedName formatted = vcard.getFormattedName();
-		if (formatted != null && isEmail(formatted.getValue())) {
-			rescued = formatted.getValue().trim();
-			changed = true;
+		if (formatted != null) {
+			DisplayNameEmailSuffix suffix = displayNameEmailSuffixOf(formatted.getValue());
+			if (suffix != null) {
+				formatted.setValue(suffix.displayName());
+				rescued = suffix.email();
+				changed = true;
+				changed |= populateMissingNameParts(vcard, suffix.displayName());
+			}
+			else if (isEmail(formatted.getValue())) {
+				rescued = formatted.getValue().trim();
+				changed = true;
+			}
 		}
 		if (rescued == null) {
 			return false;
@@ -230,6 +245,43 @@ final class NameRepairRule implements VCardCleaningRule {
 			vcard.addEmail(address);
 		}
 		rebuildNameIfEmpty(vcard, address);
+		return changed;
+	}
+
+	private DisplayNameEmailSuffix displayNameEmailSuffixOf(String value) {
+		if (value == null) {
+			return null;
+		}
+		java.util.regex.Matcher matcher = DISPLAY_NAME_EMAIL_SUFFIX.matcher(value);
+		if (!matcher.matches() || !isEmail(matcher.group(2))) {
+			return null;
+		}
+		String displayName = matcher.group(1).trim();
+		return displayName.isEmpty() ? null : new DisplayNameEmailSuffix(displayName, matcher.group(2));
+	}
+
+	private boolean populateMissingNameParts(VCard vcard, String displayName) {
+		StructuredName name = vcard.getStructuredName();
+		if (name != null && !isBlank(name.getGiven()) && !isBlank(name.getFamily())) {
+			return false;
+		}
+		String[] parts = displayName.split("\\s+", 2);
+		if (parts.length != 2 || looksLikeOrganization(displayName)) {
+			return false;
+		}
+		if (name == null) {
+			name = new StructuredName();
+			vcard.setStructuredName(name);
+		}
+		boolean changed = false;
+		if (isBlank(name.getGiven())) {
+			name.setGiven(parts[0]);
+			changed = true;
+		}
+		if (isBlank(name.getFamily())) {
+			name.setFamily(parts[1]);
+			changed = true;
+		}
 		return changed;
 	}
 
@@ -259,71 +311,53 @@ final class NameRepairRule implements VCardCleaningRule {
 		}
 	}
 
-	// ── ALL-CAPS repair ───────────────────────────────────────────────────────
+	// ── Given/family name casing ──────────────────────────────────────────────
 
-	private boolean repairAllCapsComponents(VCard vcard) {
+	private boolean normalizeStructuredNameCase(VCard vcard) {
 		boolean changed = false;
 		StructuredName name = vcard.getStructuredName();
-		if (name != null) {
-			String combined = ((name.getGiven() != null ? name.getGiven() : "") + " "
-					+ (name.getFamily() != null ? name.getFamily() : ""))
-				.trim();
-			if (qualifiesForRepair(combined)) {
-				String given = recase(name.getGiven());
-				if (!Objects.equals(given, name.getGiven())) {
-					name.setGiven(given);
-					changed = true;
-				}
-				String family = recase(name.getFamily());
-				if (!Objects.equals(family, name.getFamily())) {
-					name.setFamily(family);
-					changed = true;
-				}
-			}
+		if (name == null) {
+			return false;
 		}
-		FormattedName formatted = vcard.getFormattedName();
-		if (formatted != null && qualifiesForRepair(formatted.getValue())) {
-			String value = recase(formatted.getValue());
-			if (!Objects.equals(value, formatted.getValue())) {
-				formatted.setValue(value);
-				changed = true;
-			}
+		String given = normalizeNameComponent(name.getGiven());
+		if (given != null && !given.equals(name.getGiven())) {
+			name.setGiven(given);
+			changed = true;
+		}
+		String family = normalizeNameComponent(name.getFamily());
+		if (family != null && !family.equals(name.getFamily())) {
+			name.setFamily(family);
+			changed = true;
 		}
 		return changed;
 	}
 
-	/**
-	 * A name qualifies only when it is entirely upper-case AND contains at least one real
-	 * word (three or more letters) — initials like {@code "JD NG"} are left alone, they
-	 * might be deliberate.
-	 */
-	private boolean qualifiesForRepair(String value) {
-		if (value == null || value.isBlank() || !value.equals(value.toUpperCase(Locale.ROOT))) {
-			return false;
+	private String normalizeNameComponent(String value) {
+		if (value == null || value.isEmpty()) {
+			return value;
 		}
-		for (String token : value.split("[\s-]+")) {
-			if (token.chars().filter(Character::isLetter).count() >= 3) {
-				return true;
-			}
+		if (qualifiesForSmartCase(value)) {
+			return smartCase(value);
 		}
-		return false;
+		return Character.isLowerCase(value.codePointAt(0)) ? smartCase(value) : value;
 	}
 
-	private String recase(String value) {
-		if (value == null) {
-			return null;
-		}
+	private boolean qualifiesForSmartCase(String value) {
+		return value.equals(value.toUpperCase(Locale.ROOT)) && value.chars().filter(Character::isLetter).count() >= 3;
+	}
+
+	private String smartCase(String value) {
 		StringBuilder result = new StringBuilder();
 		for (String token : value.split(" ")) {
 			if (!result.isEmpty()) {
 				result.append(' ');
 			}
-			result.append(smartCase(token));
+			result.append(smartCaseToken(token));
 		}
 		return result.toString();
 	}
 
-	private String smartCase(String token) {
+	private String smartCaseToken(String token) {
 		String lower = token.toLowerCase(Locale.ROOT);
 		if (LOWERCASE_PARTICLES.contains(lower)) {
 			return lower;
@@ -331,17 +365,21 @@ final class NameRepairRule implements VCardCleaningRule {
 		if (lower.contains("-")) {
 			String[] parts = lower.split("-", -1);
 			for (int i = 0; i < parts.length; i++) {
-				parts[i] = smartCase(parts[i]);
+				parts[i] = smartCaseToken(parts[i]);
 			}
 			return String.join("-", parts);
 		}
 		if (lower.startsWith("mc") && lower.length() > 2) {
-			return "Mc" + capitalize(lower.substring(2));
+			return "Mc" + pascalCase(lower.substring(2));
 		}
 		if (lower.startsWith("o'") && lower.length() > 2) {
-			return "O'" + capitalize(lower.substring(2));
+			return "O'" + pascalCase(lower.substring(2));
 		}
-		return capitalize(lower);
+		return pascalCase(lower);
+	}
+
+	private String pascalCase(String value) {
+		return value.substring(0, 1).toUpperCase(Locale.ROOT) + value.substring(1).toLowerCase(Locale.ROOT);
 	}
 
 	// ── Prefix canonicalization ───────────────────────────────────────────────
@@ -377,6 +415,9 @@ final class NameRepairRule implements VCardCleaningRule {
 
 	private boolean isBlank(String value) {
 		return value == null || value.isBlank();
+	}
+
+	private record DisplayNameEmailSuffix(String displayName, String email) {
 	}
 
 }

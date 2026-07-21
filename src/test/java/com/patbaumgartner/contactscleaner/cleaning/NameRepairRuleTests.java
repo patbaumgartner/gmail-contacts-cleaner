@@ -24,7 +24,7 @@ class NameRepairRuleTests {
 		return vcard;
 	}
 
-	// ── ALL-CAPS ──────────────────────────────────────────────────────────────
+	// ── Given/family name casing ──────────────────────────────────────────────
 
 	@ParameterizedTest(name = "{0} {1} -> {2} {3}")
 	@CsvSource(textBlock = """
@@ -33,8 +33,10 @@ class NameRepairRuleTests {
 			RONALD,    MCDONALD,      Ronald,    McDonald
 			SHANE,     O'BRIEN,       Shane,     O'Brien
 			JANE,      VAN DER BERG,  Jane,      van der Berg
+			jANE,      mCDONALD,      Jane,      McDonald
 			""")
-	void repairsAllCapsNamesWithSmartCasing(String given, String family, String expectedGiven, String expectedFamily) {
+	void normalizesIrregularNamesWithSmartCasing(String given, String family, String expectedGiven,
+			String expectedFamily) {
 		VCard vcard = named(given, family);
 
 		assertThat(this.rule.apply(vcard)).isTrue();
@@ -43,10 +45,10 @@ class NameRepairRuleTests {
 	}
 
 	@Test
-	void mixedCaseNamesAreNeverTouched() {
+	void preservesNamesWithIntentionalInnerCapitalsAndInitials() {
 		assertThat(this.rule.apply(named("Jane", "Doe"))).isFalse();
 		assertThat(this.rule.apply(named("Jane", "McDonald"))).isFalse();
-		// Short acronym-like names are left alone (could be initials).
+		assertThat(this.rule.apply(named("Jean-Luc", "O'Brien"))).isFalse();
 		assertThat(this.rule.apply(named("JD", "NG"))).isFalse();
 	}
 
@@ -198,6 +200,37 @@ class NameRepairRuleTests {
 		company.setFormattedName(new FormattedName("Meier, Müller & Partner AG"));
 		assertThat(this.rule.apply(company)).isFalse();
 		assertThat(company.getFormattedName().getValue()).isEqualTo("Meier, Müller & Partner AG");
+	}
+
+	@Test
+	void simplifiesDisplayNameEmailSuffixAndPopulatesMissingNameParts() {
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new FormattedName("Jane Example (jane.example@example.test)"));
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Jane Example");
+		assertThat(vcard.getEmails()).extracting(Email::getValue).containsExactly("jane.example@example.test");
+		assertThat(vcard.getStructuredName().getGiven()).isEqualTo("Jane");
+		assertThat(vcard.getStructuredName().getFamily()).isEqualTo("Example");
+	}
+
+	@Test
+	void retainsExistingNamePartsWhenSimplifyingDisplayNameEmailSuffix() {
+		VCard vcard = named("Jane", "Example");
+		vcard.setFormattedName(new FormattedName("Jane Example (jane.example@example.test)"));
+
+		assertThat(this.rule.apply(vcard)).isTrue();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Jane Example");
+		assertThat(vcard.getEmails()).extracting(Email::getValue).containsExactly("jane.example@example.test");
+	}
+
+	@Test
+	void keepsNonEmailParenthesesInDisplayNames() {
+		VCard vcard = new VCard();
+		vcard.setFormattedName(new FormattedName("Jane Example (Marketing)"));
+
+		assertThat(this.rule.apply(vcard)).isFalse();
+		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Jane Example (Marketing)");
 	}
 
 	// ── E-mail in name ────────────────────────────────────────────────────────

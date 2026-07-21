@@ -1,6 +1,7 @@
 package com.patbaumgartner.contactscleaner.cleaning;
 
 import java.util.List;
+import java.util.Locale;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
@@ -44,10 +45,12 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param removeJunkNameSuffixes drop parenthesized name suffixes like {@code (JIRA)} or
  * {@code (whatsapp)} — messenger/phone import junk; real suffixes ({@code Jr.},
  * {@code PMP}) are kept
- * @param repairNames fix structurally broken names: ALL-CAPS names get smart casing
- * ({@code JANE DOE} → {@code Jane Doe}, {@code MCDONALD} → {@code McDonald}), known
- * prefixes are canonicalized ({@code Dr} → {@code Dr.}), and e-mail addresses stuck in
- * name fields are moved to the contact's e-mails
+ * @param repairNames fix structurally broken names: all-uppercase given/family components
+ * get smart casing ({@code MCDONALD} → {@code McDonald}), existing inner capitals are
+ * preserved, known prefixes are canonicalized ({@code Dr} → {@code Dr.}), and e-mail
+ * addresses stuck in name fields are moved to the contact's e-mails; a trailing
+ * {@code Name (name@example.com)} display-name suffix is simplified and fills missing
+ * given/family fields when unambiguous
  * @param removeWrappingNameQuotes remove wrapping quote characters around name fields
  * @param repairCommaFormattedNames rewrite unambiguous display names in the form
  * {@code Last, First} to {@code First Last}
@@ -116,6 +119,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * contact data beyond their name (<strong>destructive</strong>, off by default)
  * @param inferNamesFromEmailAddresses populate missing given/family names from an
  * unambiguous {@code first.last} or {@code first_last} e-mail local part
+ * @param removeEmailDomains e-mail domains whose addresses should be deleted, including
+ * subdomains; empty disables the rule
  */
 @ConfigurationProperties(prefix = "contacts-cleaner.cleaning")
 public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNumbers,
@@ -140,13 +145,19 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		@DefaultValue("false") boolean removeSharedPhoneNumbers, @DefaultValue("2") int sharedPhoneNumberThreshold,
 		@DefaultValue("false") boolean removeNotes, @DefaultValue("false") boolean deleteEmptyContacts,
 		@DefaultValue("false") boolean deleteBirthdayOnlyContacts,
-		@DefaultValue("true") boolean inferNamesFromEmailAddresses){
+		@DefaultValue("true") boolean inferNamesFromEmailAddresses, @DefaultValue("") List<String> removeEmailDomains){
 
 	@ConstructorBinding
 	public CleaningProperties {
 		removeCustomFields = (removeCustomFields != null) ? List.copyOf(removeCustomFields) : List.of();
 		removeOrganizations = (removeOrganizations != null)
 				? removeOrganizations.stream().filter((name) -> !name.isBlank()).toList() : List.of();
+		removeEmailDomains = (removeEmailDomains != null) ? removeEmailDomains.stream()
+			.map(String::trim)
+			.filter((domain) -> !domain.isEmpty())
+			.map((domain) -> domain.toLowerCase(Locale.ROOT))
+			.distinct()
+			.toList() : List.of();
 	}
 
 	/**
@@ -171,7 +182,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeInstantMessengers,
 				removeCustomFields, removeOrganizations, removeAdditionalOrganizations, removeSelfOrganizations,
 				removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold,
-				removeNotes, deleteEmptyContacts, false, true);
+				removeNotes, deleteEmptyContacts, false, true, List.of());
 	}
 
 	/**
@@ -182,7 +193,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	public static CleaningProperties defaults() {
 		return new CleaningProperties(true, "", true, true, false, false, true, true, true, false, true, true, true,
 				true, true, true, true, true, true, true, true, true, true, true, true, List.of("Age", "Photo"),
-				List.of(), false, true, true, true, false, 2, false, false, false, true);
+				List.of(), false, true, true, true, false, 2, false, false, false, true, List.of());
 	}
 
 	/**
@@ -202,7 +213,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
 				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
 				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses);
+				inferNamesFromEmailAddresses, removeEmailDomains);
 	}
 
 	/**
@@ -220,7 +231,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
 				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
 				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses);
+				inferNamesFromEmailAddresses, removeEmailDomains);
 	}
 
 	/**
@@ -239,7 +250,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
 				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
 				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses);
+				inferNamesFromEmailAddresses, removeEmailDomains);
 	}
 
 	/**
@@ -257,7 +268,7 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
 				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
 				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses);
+				inferNamesFromEmailAddresses, removeEmailDomains);
 	}
 
 	/**
@@ -276,6 +287,24 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
 				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
 				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses);
+				inferNamesFromEmailAddresses, removeEmailDomains);
+	}
+
+	/**
+	 * Returns a copy with e-mail removal domains set as given.
+	 * @param removeEmailDomains domains whose e-mail addresses should be deleted
+	 * @return updated cleaning properties
+	 */
+	public CleaningProperties withEmailDomainRemoval(List<String> removeEmailDomains) {
+		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
+				correctPhoneTypes, removeFaxNumbers, removeInvalidPhoneNumbers, normalizeEmailAddresses,
+				removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains, trimNames,
+				removeJunkNameSuffixes, repairNames, removeWrappingNameQuotes, repairCommaFormattedNames,
+				normalizeLabels, removeEmptyProperties, removeRedundantAddresses, removeGeoCoordinateAddresses,
+				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
+				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
+				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
+				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
+				inferNamesFromEmailAddresses, removeEmailDomains);
 	}
 }
