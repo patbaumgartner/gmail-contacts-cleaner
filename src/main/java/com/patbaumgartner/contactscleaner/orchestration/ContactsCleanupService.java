@@ -18,6 +18,8 @@ import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
 import com.patbaumgartner.contactscleaner.cleaning.EmailDomainVerifier;
 import com.patbaumgartner.contactscleaner.cleaning.OrganizationCanonicalizer;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
+import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsClient;
+import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
 import ezvcard.Ezvcard;
 import ezvcard.VCard;
 import ezvcard.VCardVersion;
@@ -52,6 +54,8 @@ public class ContactsCleanupService {
 
 	private final CardDavClient cardDavClient;
 
+	private final OtherContactsClient otherContactsClient;
+
 	private final ContactCleaner contactCleaner;
 
 	private final DuplicateContactDetector duplicateContactDetector;
@@ -68,11 +72,13 @@ public class ContactsCleanupService {
 	private final AtomicBoolean runInProgress = new AtomicBoolean(false);
 
 	ContactsCleanupService(AccountsProperties accountsProperties, CardDavClient cardDavClient,
-			ContactCleaner contactCleaner, DuplicateContactDetector duplicateContactDetector,
-			SharedPhoneNumberRemover sharedPhoneNumberRemover, EmailDomainVerifier emailDomainVerifier,
-			OrganizationCanonicalizer organizationCanonicalizer, ApplicationEventPublisher eventPublisher) {
+			OtherContactsClient otherContactsClient, ContactCleaner contactCleaner,
+			DuplicateContactDetector duplicateContactDetector, SharedPhoneNumberRemover sharedPhoneNumberRemover,
+			EmailDomainVerifier emailDomainVerifier, OrganizationCanonicalizer organizationCanonicalizer,
+			ApplicationEventPublisher eventPublisher) {
 		this.accountsProperties = accountsProperties;
 		this.cardDavClient = cardDavClient;
+		this.otherContactsClient = otherContactsClient;
 		this.contactCleaner = contactCleaner;
 		this.duplicateContactDetector = duplicateContactDetector;
 		this.sharedPhoneNumberRemover = sharedPhoneNumberRemover;
@@ -113,6 +119,7 @@ public class ContactsCleanupService {
 		long start = System.currentTimeMillis();
 		log.info("Starting cleanup for account '{}'{}", account.name(), account.dryRun() ? " (dry run)" : "");
 		try {
+			importOtherContacts(account);
 			List<AddressBookEntry> entries = cardDavClient.fetchAllContacts(account);
 
 			// Pass 1: parse and clean every contact individually. Snapshots taken
@@ -177,6 +184,19 @@ public class ContactsCleanupService {
 			log.error("Cleanup failed for account '{}' after {}ms", account.name(), duration, ex);
 			return AccountCleanupResult.failure(account.name(), duration, ex.getMessage());
 		}
+	}
+
+	private void importOtherContacts(GoogleAccount account) {
+		if (!account.importOtherContacts()) {
+			return;
+		}
+		if (account.dryRun()) {
+			log.info("[dry run] Skipping Other contacts import for account '{}'", account.name());
+			return;
+		}
+		OtherContactsImportResult result = otherContactsClient.importOtherContacts(account);
+		log.info("Promoted {} of {} Other contacts for account '{}'", result.promoted(), result.discovered(),
+				account.name());
 	}
 
 	/** Computes the before/after property diff of a changed contact. */

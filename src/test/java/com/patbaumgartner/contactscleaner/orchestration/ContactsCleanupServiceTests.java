@@ -14,6 +14,8 @@ import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
 import com.patbaumgartner.contactscleaner.cleaning.EmailDomainVerifier;
 import com.patbaumgartner.contactscleaner.cleaning.OrganizationCanonicalizer;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
+import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsClient;
+import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -63,6 +65,9 @@ class ContactsCleanupServiceTests {
 	private CardDavClient cardDavClient;
 
 	@Mock
+	private OtherContactsClient otherContactsClient;
+
+	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
 	private ContactsCleanupService service(GoogleAccount account, boolean deleteEmptyContacts) {
@@ -73,8 +78,9 @@ class ContactsCleanupServiceTests {
 
 	private ContactsCleanupService service(AccountsProperties accounts,
 			com.patbaumgartner.contactscleaner.cleaning.CleaningProperties properties) {
-		return new ContactsCleanupService(accounts, this.cardDavClient, new ContactCleaner(properties),
-				new DuplicateContactDetector(properties), new SharedPhoneNumberRemover(properties),
+		return new ContactsCleanupService(accounts, this.cardDavClient, this.otherContactsClient,
+				new ContactCleaner(properties), new DuplicateContactDetector(properties),
+				new SharedPhoneNumberRemover(properties),
 				new EmailDomainVerifier(properties, (domain) -> DomainResolution.DELIVERABLE),
 				new OrganizationCanonicalizer(properties), this.eventPublisher);
 	}
@@ -147,6 +153,30 @@ class ContactsCleanupServiceTests {
 		});
 		verify(this.cardDavClient, never()).updateContact(any(), any(), anyString());
 		verify(this.cardDavClient, never()).deleteContact(any(), any());
+	}
+
+	@Test
+	void importsOtherContactsBeforeFetchingAndCleaning() {
+		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, false, true,
+				"client-id", "client-secret", "refresh-token");
+		when(this.otherContactsClient.importOtherContacts(account)).thenReturn(new OtherContactsImportResult(2, 2));
+		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
+
+		service(account, false).cleanAllAccounts();
+
+		verify(this.otherContactsClient).importOtherContacts(account);
+		verify(this.cardDavClient).fetchAllContacts(account);
+	}
+
+	@Test
+	void skipsOtherContactsImportDuringDryRun() {
+		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, true, true,
+				"client-id", "client-secret", "refresh-token");
+		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
+
+		service(account, false).cleanAllAccounts();
+
+		verify(this.otherContactsClient, never()).importOtherContacts(any());
 	}
 
 	@Test
