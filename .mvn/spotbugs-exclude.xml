@@ -5,7 +5,9 @@
   Keep this file minimal: every exclusion must have a comment explaining why the
   finding is a false positive or an accepted risk.
 -->
-<FindBugsFilter xmlns="https://github.com/spotbugs/filter/3.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://github.com/spotbugs/filter/3.0.0 https://raw.githubusercontent.com/spotbugs/spotbugs/3.1.0/spotbugs/etc/findbugsfilter.xsd">
+<FindBugsFilter xmlns="https://github.com/spotbugs/filter/3.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="https://github.com/spotbugs/filter/3.0.0 https://raw.githubusercontent.com/spotbugs/spotbugs/3.1.0/spotbugs/etc/findbugsfilter.xsd">
 
   <!-- Spring configuration properties records: constructor parameters are bound by
        Spring and intentionally exposed via record accessors. -->
@@ -25,7 +27,18 @@
        string, so Unicode case-mapping quirks are harmless. -->
   <Match>
     <Bug pattern="IMPROPER_UNICODE" />
-    <Class name="~com\.patbaumgartner\.contactscleaner\.cleaning\.(DuplicateContactDetector|FlippedNameRepairRule|CustomFieldRemovalRule|OrganizationRemovalRule|RedundantAddressRemovalRule|FaxNumberRemovalRule|LabelNormalizationRule|NameRepairRule)" />
+    <Class
+      name="~com\.patbaumgartner\.contactscleaner\.cleaning\.(DuplicateContactDetector|FlippedNameRepairRule|CustomFieldRemovalRule|OrganizationRemovalRule|RedundantAddressRemovalRule|FaxNumberRemovalRule|LabelNormalizationRule|NameRepairRule)" />
+  </Match>
+
+  <!-- GooglePeopleApiClient$Name.sameName() uses a PRIMARY-strength Collator to
+       compare the authenticated user's own contact names (structured vs. parsed
+       "Family, Given" values) when deciding whether to propose a name update. The
+       comparison is report/update advisory only and derives no security decision,
+       so Unicode case-mapping quirks are harmless. -->
+  <Match>
+    <Bug pattern="IMPROPER_UNICODE" />
+    <Class name="~com\.patbaumgartner\.contactscleaner\.peopleapi\.GooglePeopleApiClient(\$.*)?" />
   </Match>
 
   <!-- FindSecBugs' ReDoS detector does not model possessive quantifiers (++): the
