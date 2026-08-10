@@ -40,7 +40,7 @@
     <!-- External Library Versions -->
     <spring-modulith.version>2.1.0</spring-modulith.version>
     <ez-vcard.version>0.12.2</ez-vcard.version>
-    <libphonenumber.version>9.0.35</libphonenumber.version>
+    <libphonenumber.version>9.0.36</libphonenumber.version>
     <taikai.version>1.64.0</taikai.version>
 
     <!-- Maven Core Plugins -->
