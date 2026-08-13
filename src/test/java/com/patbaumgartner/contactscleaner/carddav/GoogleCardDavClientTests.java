@@ -24,8 +24,9 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class GoogleCardDavClientTests {
 
-	private static final GoogleAccount ACCOUNT = new GoogleAccount("personal", "jane.doe@gmail.com",
-			"abcd efgh ijkl mnop", true, false);
+	private static final GoogleAccount ACCOUNT = GoogleAccount
+		.builder("personal", "jane.doe@gmail.com", "abcd efgh ijkl mnop")
+		.build();
 
 	// "jane.doe@gmail.com:abcd efgh ijkl mnop" base64-encoded
 	private static final String BASIC_AUTH_PREFIX = "Basic ";
