@@ -3,9 +3,12 @@ package com.patbaumgartner.contactscleaner.cleaning;
 import java.util.List;
 import java.util.Locale;
 
+import jakarta.validation.constraints.Min;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * Behavioral switches for the cleaning rules, bound from
@@ -15,6 +18,11 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * Destructive options default to {@code false}: out of the box the cleaner only
  * normalizes data, it never deletes anything meaningful. (Removing properties whose value
  * is completely blank is considered non-destructive.)
+ *
+ * <p>
+ * Because the record has one component per rule, construct it programmatically through
+ * {@link #builder()} / {@link #toBuilder()} rather than the positional canonical
+ * constructor — a misplaced boolean in a 38-argument call changes behavior silently.
  *
  * @param normalizePhoneNumbers strip separators and convert the {@code 00}
  * international-call prefix to {@code +}; with {@link #phoneRegion()} set, numbers are
@@ -58,14 +66,16 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * types: work/home variants (localized included) become {@code TYPE=WORK}/{@code HOME},
  * other custom labels ({@code Internet email}, {@code Obsolete}, ...) are dropped in
  * favor of the default type
+ * @param removeEmptyProperties drop properties that carry no usable value: empty
+ * {@code TEL}/{@code EMAIL}/{@code URL}/{@code NOTE}, all-blank {@code ORG}, blank or
+ * duplicate {@code X-} properties, and addresses without any of PO box, street, extended
+ * address, region or postal code — a bare {@code Zurich} / {@code Switzerland} pair is
+ * not a postal address
  * @param removeRedundantAddresses drop postal addresses that are a less complete version
  * of another address on the same contact (all filled components equal, the survivor has
  * more) — different addresses are never touched
  * @param removeGeoCoordinateAddresses drop postal addresses consisting of nothing but a
  * latitude/longitude pair — check-in/geotagging debris, not a postal address
- * @param removeEmptyProperties drop properties whose value is entirely blank (empty
- * {@code TEL}/{@code EMAIL}/{@code URL}/{@code NOTE}, all-blank {@code ORG}/{@code ADR})
- * — classic sync debris
  * @param detectDuplicateContacts report-only detection of contacts that appear to be
  * duplicates of each other (shared phone/e-mail or near-identical name); nothing is
  * merged or deleted, candidates are logged in the run summary
@@ -81,9 +91,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * same note is preserved
  * @param cleanUrls remove website URLs of dead/unwanted services (Klout, Google+,
  * Gravatar, XING, ...), trim and deduplicate the remaining ones
- * @param removeOrganizations organization names to delete (case-insensitive prefix match
- * with word boundary, so {@code Acme} also matches {@code Acme AG}) — for companies that
- * no longer exist; empty by default
  * @param removeInstantMessengers drop instant-messenger handles ({@code IMPP}: ICQ, AIM,
  * Yahoo, Skype, ...) — dead networks Google's UI no longer shows
  * @param removeCustomFields labels of custom fields to delete (case-insensitive, matched
@@ -93,6 +100,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * not expose custom fields over CardDAV — this rule only reaches label debris that
  * appears in the vCards; fields like a CSV-exported {@code Age} are invisible to the
  * protocol and must be cleaned once via CSV export/import
+ * @param removeOrganizations organization names to delete (case-insensitive prefix match
+ * with word boundary, so {@code Acme} also matches {@code Acme AG}) — for companies that
+ * no longer exist; empty by default
  * @param removeAdditionalOrganizations keep only the primary organization and drop the
  * rest — old LinkedIn/XING imports stored the whole employment history as extra
  * {@code ORG} entries (Google shows them as "Other Organizations")
@@ -108,8 +118,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * {@link #sharedPhoneNumberThreshold()} or more contacts — those are company
  * switchboards, not direct lines (<strong>destructive</strong>, off by default)
  * @param sharedPhoneNumberThreshold minimum number of contacts sharing a phone number
- * before it is considered an office line (default {@code 3}, so a landline shared by a
- * couple survives)
+ * before it is considered an office line (default {@code 2}; raise to {@code 3} to keep a
+ * landline shared by a couple). Values below {@code 2} would delete every phone number
+ * and are rejected
  * @param removeNotes delete the free-text notes field of every contact
  * (<strong>destructive</strong>, off by default)
  * @param deleteEmptyContacts delete contacts that carry no information at all — no phone,
@@ -122,6 +133,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param removeEmailDomains e-mail domains whose addresses should be deleted, including
  * subdomains; empty disables the rule
  */
+@Validated
 @ConfigurationProperties(prefix = "contacts-cleaner.cleaning")
 public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNumbers,
 		@DefaultValue("") String phoneRegion, @DefaultValue("true") boolean removeDuplicatePhoneNumbers,
@@ -142,9 +154,9 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 		@DefaultValue("false") boolean removeAdditionalOrganizations,
 		@DefaultValue("true") boolean removeSelfOrganizations, @DefaultValue("true") boolean removeDanglingTitles,
 		@DefaultValue("true") boolean canonicalizeOrganizations,
-		@DefaultValue("false") boolean removeSharedPhoneNumbers, @DefaultValue("2") int sharedPhoneNumberThreshold,
-		@DefaultValue("false") boolean removeNotes, @DefaultValue("false") boolean deleteEmptyContacts,
-		@DefaultValue("false") boolean deleteBirthdayOnlyContacts,
+		@DefaultValue("false") boolean removeSharedPhoneNumbers,
+		@DefaultValue("2") @Min(2) int sharedPhoneNumberThreshold, @DefaultValue("false") boolean removeNotes,
+		@DefaultValue("false") boolean deleteEmptyContacts, @DefaultValue("false") boolean deleteBirthdayOnlyContacts,
 		@DefaultValue("true") boolean inferNamesFromEmailAddresses, @DefaultValue("") List<String> removeEmailDomains){
 
 	@ConstructorBinding
@@ -161,150 +173,366 @@ public record CleaningProperties(@DefaultValue("true") boolean normalizePhoneNum
 	}
 
 	/**
-	 * Compatibility constructor for callers using the property set before the independent
-	 * name-repair and birthday-only deletion settings were introduced.
-	 */
-	public CleaningProperties(boolean normalizePhoneNumbers, String phoneRegion, boolean removeDuplicatePhoneNumbers,
-			boolean correctPhoneTypes, boolean removeFaxNumbers, boolean removeInvalidPhoneNumbers,
-			boolean normalizeEmailAddresses, boolean removeDuplicateEmailAddresses, boolean removeInvalidEmails,
-			boolean verifyEmailDomains, boolean trimNames, boolean removeJunkNameSuffixes, boolean repairNames,
-			boolean normalizeLabels, boolean removeEmptyProperties, boolean removeRedundantAddresses,
-			boolean removeGeoCoordinateAddresses, boolean detectDuplicateContacts, boolean repairFlippedNames,
-			boolean extractBirthdays, boolean removeSocialNetworkNotes, boolean cleanUrls,
-			boolean removeInstantMessengers, List<String> removeCustomFields, List<String> removeOrganizations,
-			boolean removeAdditionalOrganizations, boolean removeSelfOrganizations, boolean removeDanglingTitles,
-			boolean canonicalizeOrganizations, boolean removeSharedPhoneNumbers, int sharedPhoneNumberThreshold,
-			boolean removeNotes, boolean deleteEmptyContacts) {
-		this(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers, correctPhoneTypes, removeFaxNumbers,
-				removeInvalidPhoneNumbers, normalizeEmailAddresses, removeDuplicateEmailAddresses, removeInvalidEmails,
-				verifyEmailDomains, trimNames, removeJunkNameSuffixes, repairNames, true, true, normalizeLabels,
-				removeEmptyProperties, removeRedundantAddresses, removeGeoCoordinateAddresses, detectDuplicateContacts,
-				repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls, removeInstantMessengers,
-				removeCustomFields, removeOrganizations, removeAdditionalOrganizations, removeSelfOrganizations,
-				removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers, sharedPhoneNumberThreshold,
-				removeNotes, deleteEmptyContacts, false, true, List.of());
-	}
-
-	/**
-	 * Returns conservative defaults, mainly for tests and programmatic use: all
+	 * Returns the conservative defaults, mainly for tests and programmatic use: all
 	 * non-destructive rules on, no phone region, destructive rules off.
 	 * @return default cleaning properties
 	 */
 	public static CleaningProperties defaults() {
-		return new CleaningProperties(true, "", true, true, false, false, true, true, true, false, true, true, true,
-				true, true, true, true, true, true, true, true, true, true, true, true, List.of("Age", "Photo"),
-				List.of(), false, true, true, true, false, 2, false, false, false, true, List.of());
+		return builder().build();
 	}
 
 	/**
-	 * Returns a copy with the independent name-format repair options set as given.
-	 * @param removeWrappingNameQuotes remove wrapping quotes from name fields
-	 * @param repairCommaFormattedNames rewrite unambiguous {@code Last, First} names
-	 * @return updated cleaning properties
+	 * Returns a builder pre-filled with the defaults of {@link #defaults()}.
+	 * @return a new builder
 	 */
-	public CleaningProperties withNameRepairOptions(boolean removeWrappingNameQuotes,
-			boolean repairCommaFormattedNames) {
-		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				correctPhoneTypes, removeFaxNumbers, removeInvalidPhoneNumbers, normalizeEmailAddresses,
-				removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains, trimNames,
-				removeJunkNameSuffixes, repairNames, removeWrappingNameQuotes, repairCommaFormattedNames,
-				normalizeLabels, removeEmptyProperties, removeRedundantAddresses, removeGeoCoordinateAddresses,
-				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
-				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
-				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
-				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses, removeEmailDomains);
+	public static Builder builder() {
+		return new Builder();
 	}
 
 	/**
-	 * Returns a copy with the given phone region.
-	 * @param phoneRegion the ISO 3166-1 alpha-2 region
-	 * @return a new instance
+	 * Returns a builder pre-filled with this instance's values.
+	 * @return a new builder
 	 */
-	public CleaningProperties withPhoneRegion(String phoneRegion) {
-		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				correctPhoneTypes, removeFaxNumbers, removeInvalidPhoneNumbers, normalizeEmailAddresses,
-				removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains, trimNames,
-				removeJunkNameSuffixes, repairNames, removeWrappingNameQuotes, repairCommaFormattedNames,
-				normalizeLabels, removeEmptyProperties, removeRedundantAddresses, removeGeoCoordinateAddresses,
-				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
-				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
-				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
-				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses, removeEmailDomains);
+	public Builder toBuilder() {
+		return new Builder(this);
 	}
 
 	/**
-	 * Returns a copy with the destructive options set as given.
-	 * @param removeNotes delete notes
-	 * @param deleteEmptyContacts delete empty contacts
-	 * @return a new instance
+	 * Named, order-independent construction of {@link CleaningProperties}. Every setter
+	 * corresponds to one record component and defaults to the value the Spring binder
+	 * would apply.
 	 */
-	public CleaningProperties withDestructiveOptions(boolean removeNotes, boolean deleteEmptyContacts) {
-		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				correctPhoneTypes, removeFaxNumbers, removeInvalidPhoneNumbers, normalizeEmailAddresses,
-				removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains, trimNames,
-				removeJunkNameSuffixes, repairNames, removeWrappingNameQuotes, repairCommaFormattedNames,
-				normalizeLabels, removeEmptyProperties, removeRedundantAddresses, removeGeoCoordinateAddresses,
-				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
-				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
-				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
-				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses, removeEmailDomains);
-	}
+	public static final class Builder {
 
-	/**
-	 * Returns a copy with birthday-only contact deletion enabled or disabled.
-	 * @param deleteBirthdayOnlyContacts delete contacts that contain only a birthday
-	 * @return updated cleaning properties
-	 */
-	public CleaningProperties withDeleteBirthdayOnlyContacts(boolean deleteBirthdayOnlyContacts) {
-		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				correctPhoneTypes, removeFaxNumbers, removeInvalidPhoneNumbers, normalizeEmailAddresses,
-				removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains, trimNames,
-				removeJunkNameSuffixes, repairNames, removeWrappingNameQuotes, repairCommaFormattedNames,
-				normalizeLabels, removeEmptyProperties, removeRedundantAddresses, removeGeoCoordinateAddresses,
-				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
-				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
-				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
-				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses, removeEmailDomains);
-	}
+		private boolean normalizePhoneNumbers = true;
 
-	/**
-	 * Returns a copy with e-mail-based structured-name inference enabled or disabled.
-	 * @param inferNamesFromEmailAddresses infer missing names from {@code first.last}
-	 * e-mails
-	 * @return updated cleaning properties
-	 */
-	public CleaningProperties withEmailNameInference(boolean inferNamesFromEmailAddresses) {
-		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				correctPhoneTypes, removeFaxNumbers, removeInvalidPhoneNumbers, normalizeEmailAddresses,
-				removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains, trimNames,
-				removeJunkNameSuffixes, repairNames, removeWrappingNameQuotes, repairCommaFormattedNames,
-				normalizeLabels, removeEmptyProperties, removeRedundantAddresses, removeGeoCoordinateAddresses,
-				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
-				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
-				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
-				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses, removeEmailDomains);
-	}
+		private String phoneRegion = "";
 
-	/**
-	 * Returns a copy with e-mail removal domains set as given.
-	 * @param removeEmailDomains domains whose e-mail addresses should be deleted
-	 * @return updated cleaning properties
-	 */
-	public CleaningProperties withEmailDomainRemoval(List<String> removeEmailDomains) {
-		return new CleaningProperties(normalizePhoneNumbers, phoneRegion, removeDuplicatePhoneNumbers,
-				correctPhoneTypes, removeFaxNumbers, removeInvalidPhoneNumbers, normalizeEmailAddresses,
-				removeDuplicateEmailAddresses, removeInvalidEmails, verifyEmailDomains, trimNames,
-				removeJunkNameSuffixes, repairNames, removeWrappingNameQuotes, repairCommaFormattedNames,
-				normalizeLabels, removeEmptyProperties, removeRedundantAddresses, removeGeoCoordinateAddresses,
-				detectDuplicateContacts, repairFlippedNames, extractBirthdays, removeSocialNetworkNotes, cleanUrls,
-				removeInstantMessengers, removeCustomFields, removeOrganizations, removeAdditionalOrganizations,
-				removeSelfOrganizations, removeDanglingTitles, canonicalizeOrganizations, removeSharedPhoneNumbers,
-				sharedPhoneNumberThreshold, removeNotes, deleteEmptyContacts, deleteBirthdayOnlyContacts,
-				inferNamesFromEmailAddresses, removeEmailDomains);
+		private boolean removeDuplicatePhoneNumbers = true;
+
+		private boolean correctPhoneTypes = true;
+
+		private boolean removeFaxNumbers;
+
+		private boolean removeInvalidPhoneNumbers;
+
+		private boolean normalizeEmailAddresses = true;
+
+		private boolean removeDuplicateEmailAddresses = true;
+
+		private boolean removeInvalidEmails = true;
+
+		private boolean verifyEmailDomains;
+
+		private boolean trimNames = true;
+
+		private boolean removeJunkNameSuffixes = true;
+
+		private boolean repairNames = true;
+
+		private boolean removeWrappingNameQuotes = true;
+
+		private boolean repairCommaFormattedNames = true;
+
+		private boolean normalizeLabels = true;
+
+		private boolean removeEmptyProperties = true;
+
+		private boolean removeRedundantAddresses = true;
+
+		private boolean removeGeoCoordinateAddresses = true;
+
+		private boolean detectDuplicateContacts = true;
+
+		private boolean repairFlippedNames = true;
+
+		private boolean extractBirthdays = true;
+
+		private boolean removeSocialNetworkNotes = true;
+
+		private boolean cleanUrls = true;
+
+		private boolean removeInstantMessengers = true;
+
+		private List<String> removeCustomFields = List.of("Age", "Photo");
+
+		private List<String> removeOrganizations = List.of();
+
+		private boolean removeAdditionalOrganizations;
+
+		private boolean removeSelfOrganizations = true;
+
+		private boolean removeDanglingTitles = true;
+
+		private boolean canonicalizeOrganizations = true;
+
+		private boolean removeSharedPhoneNumbers;
+
+		private int sharedPhoneNumberThreshold = 2;
+
+		private boolean removeNotes;
+
+		private boolean deleteEmptyContacts;
+
+		private boolean deleteBirthdayOnlyContacts;
+
+		private boolean inferNamesFromEmailAddresses = true;
+
+		private List<String> removeEmailDomains = List.of();
+
+		private Builder() {
+		}
+
+		private Builder(CleaningProperties source) {
+			this.normalizePhoneNumbers = source.normalizePhoneNumbers();
+			this.phoneRegion = source.phoneRegion();
+			this.removeDuplicatePhoneNumbers = source.removeDuplicatePhoneNumbers();
+			this.correctPhoneTypes = source.correctPhoneTypes();
+			this.removeFaxNumbers = source.removeFaxNumbers();
+			this.removeInvalidPhoneNumbers = source.removeInvalidPhoneNumbers();
+			this.normalizeEmailAddresses = source.normalizeEmailAddresses();
+			this.removeDuplicateEmailAddresses = source.removeDuplicateEmailAddresses();
+			this.removeInvalidEmails = source.removeInvalidEmails();
+			this.verifyEmailDomains = source.verifyEmailDomains();
+			this.trimNames = source.trimNames();
+			this.removeJunkNameSuffixes = source.removeJunkNameSuffixes();
+			this.repairNames = source.repairNames();
+			this.removeWrappingNameQuotes = source.removeWrappingNameQuotes();
+			this.repairCommaFormattedNames = source.repairCommaFormattedNames();
+			this.normalizeLabels = source.normalizeLabels();
+			this.removeEmptyProperties = source.removeEmptyProperties();
+			this.removeRedundantAddresses = source.removeRedundantAddresses();
+			this.removeGeoCoordinateAddresses = source.removeGeoCoordinateAddresses();
+			this.detectDuplicateContacts = source.detectDuplicateContacts();
+			this.repairFlippedNames = source.repairFlippedNames();
+			this.extractBirthdays = source.extractBirthdays();
+			this.removeSocialNetworkNotes = source.removeSocialNetworkNotes();
+			this.cleanUrls = source.cleanUrls();
+			this.removeInstantMessengers = source.removeInstantMessengers();
+			this.removeCustomFields = source.removeCustomFields();
+			this.removeOrganizations = source.removeOrganizations();
+			this.removeAdditionalOrganizations = source.removeAdditionalOrganizations();
+			this.removeSelfOrganizations = source.removeSelfOrganizations();
+			this.removeDanglingTitles = source.removeDanglingTitles();
+			this.canonicalizeOrganizations = source.canonicalizeOrganizations();
+			this.removeSharedPhoneNumbers = source.removeSharedPhoneNumbers();
+			this.sharedPhoneNumberThreshold = source.sharedPhoneNumberThreshold();
+			this.removeNotes = source.removeNotes();
+			this.deleteEmptyContacts = source.deleteEmptyContacts();
+			this.deleteBirthdayOnlyContacts = source.deleteBirthdayOnlyContacts();
+			this.inferNamesFromEmailAddresses = source.inferNamesFromEmailAddresses();
+			this.removeEmailDomains = source.removeEmailDomains();
+		}
+
+		public Builder normalizePhoneNumbers(boolean value) {
+			this.normalizePhoneNumbers = value;
+			return this;
+		}
+
+		public Builder phoneRegion(String value) {
+			this.phoneRegion = value;
+			return this;
+		}
+
+		public Builder removeDuplicatePhoneNumbers(boolean value) {
+			this.removeDuplicatePhoneNumbers = value;
+			return this;
+		}
+
+		public Builder correctPhoneTypes(boolean value) {
+			this.correctPhoneTypes = value;
+			return this;
+		}
+
+		public Builder removeFaxNumbers(boolean value) {
+			this.removeFaxNumbers = value;
+			return this;
+		}
+
+		public Builder removeInvalidPhoneNumbers(boolean value) {
+			this.removeInvalidPhoneNumbers = value;
+			return this;
+		}
+
+		public Builder normalizeEmailAddresses(boolean value) {
+			this.normalizeEmailAddresses = value;
+			return this;
+		}
+
+		public Builder removeDuplicateEmailAddresses(boolean value) {
+			this.removeDuplicateEmailAddresses = value;
+			return this;
+		}
+
+		public Builder removeInvalidEmails(boolean value) {
+			this.removeInvalidEmails = value;
+			return this;
+		}
+
+		public Builder verifyEmailDomains(boolean value) {
+			this.verifyEmailDomains = value;
+			return this;
+		}
+
+		public Builder trimNames(boolean value) {
+			this.trimNames = value;
+			return this;
+		}
+
+		public Builder removeJunkNameSuffixes(boolean value) {
+			this.removeJunkNameSuffixes = value;
+			return this;
+		}
+
+		public Builder repairNames(boolean value) {
+			this.repairNames = value;
+			return this;
+		}
+
+		public Builder removeWrappingNameQuotes(boolean value) {
+			this.removeWrappingNameQuotes = value;
+			return this;
+		}
+
+		public Builder repairCommaFormattedNames(boolean value) {
+			this.repairCommaFormattedNames = value;
+			return this;
+		}
+
+		public Builder normalizeLabels(boolean value) {
+			this.normalizeLabels = value;
+			return this;
+		}
+
+		public Builder removeEmptyProperties(boolean value) {
+			this.removeEmptyProperties = value;
+			return this;
+		}
+
+		public Builder removeRedundantAddresses(boolean value) {
+			this.removeRedundantAddresses = value;
+			return this;
+		}
+
+		public Builder removeGeoCoordinateAddresses(boolean value) {
+			this.removeGeoCoordinateAddresses = value;
+			return this;
+		}
+
+		public Builder detectDuplicateContacts(boolean value) {
+			this.detectDuplicateContacts = value;
+			return this;
+		}
+
+		public Builder repairFlippedNames(boolean value) {
+			this.repairFlippedNames = value;
+			return this;
+		}
+
+		public Builder extractBirthdays(boolean value) {
+			this.extractBirthdays = value;
+			return this;
+		}
+
+		public Builder removeSocialNetworkNotes(boolean value) {
+			this.removeSocialNetworkNotes = value;
+			return this;
+		}
+
+		public Builder cleanUrls(boolean value) {
+			this.cleanUrls = value;
+			return this;
+		}
+
+		public Builder removeInstantMessengers(boolean value) {
+			this.removeInstantMessengers = value;
+			return this;
+		}
+
+		public Builder removeCustomFields(List<String> value) {
+			this.removeCustomFields = value;
+			return this;
+		}
+
+		public Builder removeOrganizations(List<String> value) {
+			this.removeOrganizations = value;
+			return this;
+		}
+
+		public Builder removeAdditionalOrganizations(boolean value) {
+			this.removeAdditionalOrganizations = value;
+			return this;
+		}
+
+		public Builder removeSelfOrganizations(boolean value) {
+			this.removeSelfOrganizations = value;
+			return this;
+		}
+
+		public Builder removeDanglingTitles(boolean value) {
+			this.removeDanglingTitles = value;
+			return this;
+		}
+
+		public Builder canonicalizeOrganizations(boolean value) {
+			this.canonicalizeOrganizations = value;
+			return this;
+		}
+
+		public Builder removeSharedPhoneNumbers(boolean value) {
+			this.removeSharedPhoneNumbers = value;
+			return this;
+		}
+
+		public Builder sharedPhoneNumberThreshold(int value) {
+			this.sharedPhoneNumberThreshold = value;
+			return this;
+		}
+
+		public Builder removeNotes(boolean value) {
+			this.removeNotes = value;
+			return this;
+		}
+
+		public Builder deleteEmptyContacts(boolean value) {
+			this.deleteEmptyContacts = value;
+			return this;
+		}
+
+		public Builder deleteBirthdayOnlyContacts(boolean value) {
+			this.deleteBirthdayOnlyContacts = value;
+			return this;
+		}
+
+		public Builder inferNamesFromEmailAddresses(boolean value) {
+			this.inferNamesFromEmailAddresses = value;
+			return this;
+		}
+
+		public Builder removeEmailDomains(List<String> value) {
+			this.removeEmailDomains = value;
+			return this;
+		}
+
+		/**
+		 * Builds the immutable properties instance.
+		 * @return the configured cleaning properties
+		 */
+		public CleaningProperties build() {
+			return new CleaningProperties(this.normalizePhoneNumbers, this.phoneRegion,
+					this.removeDuplicatePhoneNumbers, this.correctPhoneTypes, this.removeFaxNumbers,
+					this.removeInvalidPhoneNumbers, this.normalizeEmailAddresses, this.removeDuplicateEmailAddresses,
+					this.removeInvalidEmails, this.verifyEmailDomains, this.trimNames, this.removeJunkNameSuffixes,
+					this.repairNames, this.removeWrappingNameQuotes, this.repairCommaFormattedNames,
+					this.normalizeLabels, this.removeEmptyProperties, this.removeRedundantAddresses,
+					this.removeGeoCoordinateAddresses, this.detectDuplicateContacts, this.repairFlippedNames,
+					this.extractBirthdays, this.removeSocialNetworkNotes, this.cleanUrls, this.removeInstantMessengers,
+					this.removeCustomFields, this.removeOrganizations, this.removeAdditionalOrganizations,
+					this.removeSelfOrganizations, this.removeDanglingTitles, this.canonicalizeOrganizations,
+					this.removeSharedPhoneNumbers, this.sharedPhoneNumberThreshold, this.removeNotes,
+					this.deleteEmptyContacts, this.deleteBirthdayOnlyContacts, this.inferNamesFromEmailAddresses,
+					this.removeEmailDomains);
+		}
+
 	}
 }

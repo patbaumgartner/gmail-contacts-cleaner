@@ -80,9 +80,8 @@ class OrganizationCanonicalizerTests {
 
 	@Test
 	void disabledViaProperty() {
-		var disabled = new OrganizationCanonicalizer(new CleaningProperties(true, "", true, true, false, false, true,
-				true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true,
-				java.util.List.of("Age"), java.util.List.of(), false, true, true, false, false, 2, false, false));
+		var disabled = new OrganizationCanonicalizer(
+				CleaningProperties.builder().canonicalizeOrganizations(false).build());
 		VCard first = contactAt("Acme AG");
 		VCard second = contactAt("acme ag");
 
