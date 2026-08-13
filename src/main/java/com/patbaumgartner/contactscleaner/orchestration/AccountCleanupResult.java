@@ -40,18 +40,10 @@ public record AccountCleanupResult(String accountName, boolean successful, int t
 		googleContactNames = (googleContactNames != null) ? googleContactNames : GoogleContactNameResult.EMPTY;
 	}
 
-	public AccountCleanupResult(String accountName, boolean successful, int totalContacts, int updatedContacts,
-			int deletedContacts, List<DuplicateCandidate> duplicateCandidates, List<ContactChange> changes,
-			OtherContactsImportResult otherContactsImport, GoogleProfilePhotoResult googleProfilePhotos, boolean dryRun,
-			long durationMs, String message) {
-		this(accountName, successful, totalContacts, updatedContacts, deletedContacts, duplicateCandidates, changes,
-				otherContactsImport, googleProfilePhotos, dryRun, GoogleContactNameResult.EMPTY, durationMs, message);
-	}
-
-	static AccountCleanupResult failure(String accountName, OtherContactsImportResult otherContactsImport,
-			GoogleProfilePhotoResult googleProfilePhotos, GoogleContactNameResult googleContactNames, long durationMs,
-			String message) {
+	static AccountCleanupResult failure(String accountName, boolean dryRun,
+			OtherContactsImportResult otherContactsImport, GoogleProfilePhotoResult googleProfilePhotos,
+			GoogleContactNameResult googleContactNames, long durationMs, String message) {
 		return new AccountCleanupResult(accountName, false, 0, 0, 0, List.of(), List.of(), otherContactsImport,
-				googleProfilePhotos, false, googleContactNames, durationMs, message);
+				googleProfilePhotos, dryRun, googleContactNames, durationMs, message);
 	}
 }

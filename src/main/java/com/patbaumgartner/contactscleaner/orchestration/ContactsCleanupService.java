@@ -242,9 +242,15 @@ public class ContactsCleanupService {
 		catch (RuntimeException ex) {
 			long duration = System.currentTimeMillis() - start;
 			log.error("Cleanup failed for account '{}' after {}ms", account.name(), duration, ex);
-			return AccountCleanupResult.failure(account.name(), otherContactsImport, googleProfilePhotos,
-					googleContactNames, duration, ex.getMessage());
+			return AccountCleanupResult.failure(account.name(), account.dryRun(), otherContactsImport,
+					googleProfilePhotos, googleContactNames, duration, describe(ex));
 		}
+	}
+
+	/** Exceptions without a message (e.g. NPE) must still explain themselves. */
+	private String describe(RuntimeException ex) {
+		return (ex.getMessage() != null && !ex.getMessage().isBlank()) ? ex.getMessage()
+				: ex.getClass().getSimpleName();
 	}
 
 	private boolean importsOtherContacts(GoogleAccount account) {
