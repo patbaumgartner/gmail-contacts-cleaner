@@ -284,6 +284,30 @@ class ContactsCleanupServiceTests {
 	}
 
 	@Test
+	void reportsAFailedDryRunAsADryRun() {
+		GoogleAccount account = account(true);
+		when(this.cardDavClient.fetchAllContacts(account)).thenThrow(new CardDavException("401 Unauthorized"));
+
+		List<AccountCleanupResult> results = service(account, false).cleanAllAccounts();
+
+		assertThat(results).singleElement().satisfies((result) -> {
+			assertThat(result.successful()).isFalse();
+			assertThat(result.dryRun()).isTrue();
+			assertThat(result.message()).isEqualTo("401 Unauthorized");
+		});
+	}
+
+	@Test
+	void describesMessagelessFailuresByExceptionType() {
+		GoogleAccount account = account(false);
+		when(this.cardDavClient.fetchAllContacts(account)).thenThrow(new IllegalStateException());
+
+		List<AccountCleanupResult> results = service(account, false).cleanAllAccounts();
+
+		assertThat(results.getFirst().message()).isEqualTo("IllegalStateException");
+	}
+
+	@Test
 	void skipsDisabledAccounts() {
 		GoogleAccount disabled = new GoogleAccount("disabled", "off@gmail.com", "pw", false, false);
 		var accounts = new AccountsProperties(List.of(disabled));
