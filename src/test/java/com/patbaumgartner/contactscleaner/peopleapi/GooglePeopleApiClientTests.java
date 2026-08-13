@@ -107,7 +107,23 @@ class GooglePeopleApiClientTests {
 
 		assertThatExceptionOfType(OtherContactsException.class)
 			.isThrownBy(() -> this.client.importOtherContacts(account))
-			.withMessageContaining("requires OAuth client ID");
+			.withMessage("Other contacts import for account 'personal' requires OAuth client ID, client secret, "
+					+ "and refresh token");
+	}
+
+	@Test
+	void rejectsProfilePhotoAndNameRepairWithoutOAuthCredentials() {
+		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, false, false,
+				"", "", "");
+
+		assertThatExceptionOfType(OtherContactsException.class)
+			.isThrownBy(() -> this.client.preferGoogleProfilePhotos(account))
+			.withMessage("People API access for account 'personal' requires OAuth client ID, client secret, "
+					+ "and refresh token");
+		assertThatExceptionOfType(OtherContactsException.class)
+			.isThrownBy(() -> this.client.repairCommaFormattedContactNames(account))
+			.withMessage("People API access for account 'personal' requires OAuth client ID, client secret, "
+					+ "and refresh token");
 	}
 
 	@Test

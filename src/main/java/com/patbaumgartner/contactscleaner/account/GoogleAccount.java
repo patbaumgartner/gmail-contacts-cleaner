@@ -72,9 +72,10 @@ public record GoogleAccount(@NotBlank String name, @NotBlank @Email String email
 	 */
 	@Override
 	public String toString() {
-		return "GoogleAccount[name=%s, email=%s, appPassword=****, enabled=%s, dryRun=%s, importOtherContacts=%s, "
+		return ("GoogleAccount[name=%s, email=%s, appPassword=****, enabled=%s, dryRun=%s, importOtherContacts=%s, "
 				+ "preferGoogleProfilePhotos=%s, repairGoogleContactDisplayNames=%s, oauthClientId=****, "
-				+ "oauthClientSecret=****, oauthRefreshToken=****]".formatted(name, email, enabled, dryRun,
-						importOtherContacts, preferGoogleProfilePhotos, repairGoogleContactDisplayNames);
+				+ "oauthClientSecret=****, oauthRefreshToken=****]")
+			.formatted(name, email, enabled, dryRun, importOtherContacts, preferGoogleProfilePhotos,
+					repairGoogleContactDisplayNames);
 	}
 }

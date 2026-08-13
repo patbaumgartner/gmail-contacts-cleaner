@@ -51,8 +51,9 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient, 
 	public OtherContactsImportResult importOtherContacts(GoogleAccount account, Set<String> knownEmailAddresses,
 			Set<String> knownPhoneNumbers) {
 		if (!account.hasOtherContactsImportCredentials()) {
-			throw new OtherContactsException("Other contacts import for account '%s' requires OAuth client ID, "
-					+ "client secret, and refresh token".formatted(account.name()));
+			throw new OtherContactsException(("Other contacts import for account '%s' requires OAuth client ID, "
+					+ "client secret, and refresh token")
+				.formatted(account.name()));
 		}
 		try {
 			String accessToken = refreshAccessToken(account);
@@ -216,8 +217,9 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient, 
 
 	private void validateOAuthCredentials(GoogleAccount account) {
 		if (!account.hasOtherContactsImportCredentials()) {
-			throw new OtherContactsException("People API access for account '%s' requires OAuth client ID, "
-					+ "client secret, and refresh token".formatted(account.name()));
+			throw new OtherContactsException(("People API access for account '%s' requires OAuth client ID, "
+					+ "client secret, and refresh token")
+				.formatted(account.name()));
 		}
 	}
 
