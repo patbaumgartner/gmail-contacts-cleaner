@@ -47,13 +47,13 @@ class ContactCleanerTests {
 		ContactCleaner conservative = new ContactCleaner(defaults());
 		assertThat(conservative.clean(emptyContact).empty()).isFalse();
 
-		ContactCleaner destructive = new ContactCleaner(defaults().withDestructiveOptions(false, true));
+		ContactCleaner destructive = new ContactCleaner(defaults().toBuilder().deleteEmptyContacts(true).build());
 		assertThat(destructive.clean(emptyContact).empty()).isTrue();
 	}
 
 	@Test
 	void contactWithOnlyABirthdayIsNotEmpty() {
-		ContactCleaner cleaner = new ContactCleaner(defaults().withDestructiveOptions(false, true));
+		ContactCleaner cleaner = new ContactCleaner(defaults().toBuilder().deleteEmptyContacts(true).build());
 		VCard vcard = new VCard();
 		vcard.setBirthday(new ezvcard.property.Birthday(java.time.LocalDate.of(1980, 3, 12)));
 
@@ -62,7 +62,7 @@ class ContactCleanerTests {
 
 	@Test
 	void deletesBirthdayOnlyContactsWhenEnabled() {
-		ContactCleaner cleaner = new ContactCleaner(defaults().withDeleteBirthdayOnlyContacts(true));
+		ContactCleaner cleaner = new ContactCleaner(defaults().toBuilder().deleteBirthdayOnlyContacts(true).build());
 		VCard vcard = new VCard();
 		vcard.setBirthday(new ezvcard.property.Birthday(java.time.LocalDate.of(1980, 3, 12)));
 
@@ -71,7 +71,7 @@ class ContactCleanerTests {
 
 	@Test
 	void keepsBirthdayContactsThatAlsoHaveAnEmailAddress() {
-		ContactCleaner cleaner = new ContactCleaner(defaults().withDeleteBirthdayOnlyContacts(true));
+		ContactCleaner cleaner = new ContactCleaner(defaults().toBuilder().deleteBirthdayOnlyContacts(true).build());
 		VCard vcard = new VCard();
 		vcard.setBirthday(new ezvcard.property.Birthday(java.time.LocalDate.of(1980, 3, 12)));
 		vcard.addEmail(new Email("jane@example.com"));
@@ -81,7 +81,8 @@ class ContactCleanerTests {
 
 	@Test
 	void independentlyDisablesQuoteAndCommaNameRepairs() {
-		ContactCleaner cleaner = new ContactCleaner(defaults().withNameRepairOptions(false, false));
+		ContactCleaner cleaner = new ContactCleaner(
+				defaults().toBuilder().removeWrappingNameQuotes(false).repairCommaFormattedNames(false).build());
 		VCard vcard = new VCard();
 		vcard.setFormattedName(new ezvcard.property.FormattedName("\"Muster, Max\""));
 
@@ -91,7 +92,7 @@ class ContactCleanerTests {
 
 	@Test
 	void canDisableOnlyQuoteRemoval() {
-		ContactCleaner cleaner = new ContactCleaner(defaults().withNameRepairOptions(false, true));
+		ContactCleaner cleaner = new ContactCleaner(defaults().toBuilder().removeWrappingNameQuotes(false).build());
 		VCard vcard = new VCard();
 		vcard.setFormattedName(new ezvcard.property.FormattedName("\"Jane Doe\""));
 
@@ -101,7 +102,7 @@ class ContactCleanerTests {
 
 	@Test
 	void canDisableOnlyCommaNameRepair() {
-		ContactCleaner cleaner = new ContactCleaner(defaults().withNameRepairOptions(true, false));
+		ContactCleaner cleaner = new ContactCleaner(defaults().toBuilder().repairCommaFormattedNames(false).build());
 		VCard vcard = new VCard();
 		vcard.setFormattedName(new ezvcard.property.FormattedName("Muster, Max"));
 
@@ -111,7 +112,7 @@ class ContactCleanerTests {
 
 	@Test
 	void canDisableEmailNameInference() {
-		ContactCleaner cleaner = new ContactCleaner(defaults().withEmailNameInference(false));
+		ContactCleaner cleaner = new ContactCleaner(defaults().toBuilder().inferNamesFromEmailAddresses(false).build());
 		VCard vcard = new VCard();
 		vcard.addEmail(new Email("jane.doe@example.com"));
 
@@ -122,7 +123,7 @@ class ContactCleanerTests {
 	@Test
 	void removesConfiguredEmailDomainsAfterNormalization() {
 		ContactCleaner cleaner = new ContactCleaner(
-				defaults().withEmailDomainRemoval(java.util.List.of("former.example")));
+				defaults().toBuilder().removeEmailDomains(java.util.List.of("former.example")).build());
 		VCard vcard = new VCard();
 		vcard.addEmail(new Email("Jane@FORMER.EXAMPLE"));
 		vcard.addEmail(new Email("jane@example.com"));
@@ -133,7 +134,7 @@ class ContactCleanerTests {
 
 	@Test
 	void contactWithOnlyANoteIsNotEmpty() {
-		ContactCleaner cleaner = new ContactCleaner(defaults().withDestructiveOptions(false, true));
+		ContactCleaner cleaner = new ContactCleaner(defaults().toBuilder().deleteEmptyContacts(true).build());
 		VCard vcard = new VCard();
 		vcard.addNote("wedding photographer of Anna");
 
@@ -142,7 +143,7 @@ class ContactCleanerTests {
 
 	@Test
 	void contactWithOnlyAPhoneNumberIsNotEmpty() {
-		ContactCleaner cleaner = new ContactCleaner(defaults().withDestructiveOptions(false, true));
+		ContactCleaner cleaner = new ContactCleaner(defaults().toBuilder().deleteEmptyContacts(true).build());
 		VCard vcard = new VCard();
 		vcard.addTelephoneNumber(new Telephone("+41446681800"));
 
@@ -158,16 +159,23 @@ class ContactCleanerTests {
 		assertThat(conservative.clean(vcard).changed()).isFalse();
 		assertThat(vcard.getNotes()).hasSize(1);
 
-		ContactCleaner destructive = new ContactCleaner(defaults().withDestructiveOptions(true, false));
+		ContactCleaner destructive = new ContactCleaner(defaults().toBuilder().removeNotes(true).build());
 		assertThat(destructive.clean(vcard).changed()).isTrue();
 		assertThat(vcard.getNotes()).isEmpty();
 	}
 
 	@Test
 	void disabledRulesAreNotApplied() {
-		ContactCleaner cleaner = new ContactCleaner(new CleaningProperties(false, "", false, true, false, false, false,
-				false, false, false, false, true, true, true, false, true, true, false, false, false, false, false,
-				true, java.util.List.of("Age"), java.util.List.of(), false, true, true, true, false, 3, false, false));
+		ContactCleaner cleaner = new ContactCleaner(CleaningProperties.builder()
+			.normalizePhoneNumbers(false)
+			.removeDuplicatePhoneNumbers(false)
+			.normalizeEmailAddresses(false)
+			.removeDuplicateEmailAddresses(false)
+			.removeInvalidEmails(false)
+			.inferNamesFromEmailAddresses(false)
+			.trimNames(false)
+			.removeEmptyProperties(false)
+			.build());
 		VCard vcard = new VCard();
 		vcard.addTelephoneNumber(new Telephone("+41 44 668 18 00"));
 		vcard.addEmail(new Email("Contact@GMAIL.com"));

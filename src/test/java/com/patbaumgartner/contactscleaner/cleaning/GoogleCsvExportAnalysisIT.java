@@ -51,7 +51,7 @@ class GoogleCsvExportAnalysisIT {
 		assumeTrue(Files.exists(EXPORT), "no local export at " + EXPORT + " — skipping analysis");
 
 		List<VCard> contacts = GoogleCsvContacts.read(EXPORT);
-		CleaningProperties properties = CleaningProperties.defaults().withPhoneRegion("CH");
+		CleaningProperties properties = CleaningProperties.builder().phoneRegion("CH").build();
 
 		section("EXPORT: %d contacts loaded from %s".formatted(contacts.size(), EXPORT));
 
@@ -175,9 +175,10 @@ class GoogleCsvExportAnalysisIT {
 
 	/** What would the opt-in shared-office-number removal do? */
 	private void sharedNumberReport(List<VCard> contacts) {
-		CleaningProperties enabled = new CleaningProperties(true, "CH", true, true, false, false, true, true, true,
-				false, true, true, true, true, true, true, true, true, false, true, true, true, true,
-				java.util.List.of("Age"), java.util.List.of(), false, true, true, true, true, 2, false, false);
+		CleaningProperties enabled = CleaningProperties.builder()
+			.phoneRegion("CH")
+			.removeSharedPhoneNumbers(true)
+			.build();
 		var changed = new SharedPhoneNumberRemover(enabled).removeSharedNumbers(contacts);
 		section("SHARED PHONE NUMBERS (opt-in remove-shared-phone-numbers, default threshold 2): %d contacts affected"
 			.formatted(changed.size()));

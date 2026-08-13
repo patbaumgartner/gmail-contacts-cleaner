@@ -85,7 +85,7 @@ class ContactsCleanupServiceTests {
 
 	private ContactsCleanupService service(GoogleAccount account, boolean deleteEmptyContacts) {
 		var accounts = new AccountsProperties(List.of(account));
-		var properties = CleaningProperties.defaults().withDestructiveOptions(false, deleteEmptyContacts);
+		var properties = CleaningProperties.builder().deleteEmptyContacts(deleteEmptyContacts).build();
 		return service(accounts, properties);
 	}
 
