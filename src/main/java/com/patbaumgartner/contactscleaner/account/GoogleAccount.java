@@ -37,21 +37,16 @@ public record GoogleAccount(@NotBlank String name, @NotBlank @Email String email
 	public GoogleAccount {
 	}
 
-	public GoogleAccount(String name, String email, String appPassword, boolean enabled, boolean dryRun) {
-		this(name, email, appPassword, enabled, dryRun, false, "", "", "", false, false);
-	}
-
-	public GoogleAccount(String name, String email, String appPassword, boolean enabled, boolean dryRun,
-			boolean importOtherContacts, String oauthClientId, String oauthClientSecret, String oauthRefreshToken) {
-		this(name, email, appPassword, enabled, dryRun, importOtherContacts, oauthClientId, oauthClientSecret,
-				oauthRefreshToken, false, false);
-	}
-
-	public GoogleAccount(String name, String email, String appPassword, boolean enabled, boolean dryRun,
-			boolean importOtherContacts, String oauthClientId, String oauthClientSecret, String oauthRefreshToken,
-			boolean preferGoogleProfilePhotos) {
-		this(name, email, appPassword, enabled, dryRun, importOtherContacts, oauthClientId, oauthClientSecret,
-				oauthRefreshToken, preferGoogleProfilePhotos, false);
+	/**
+	 * Starts a builder for the three mandatory credentials; every other component keeps
+	 * the default the Spring binder would apply.
+	 * @param name human-readable label used in logs and reports
+	 * @param email the Google account e-mail address
+	 * @param appPassword a Google app password
+	 * @return a new builder
+	 */
+	public static Builder builder(String name, String email, String appPassword) {
+		return new Builder(name, email, appPassword);
 	}
 
 	/**
@@ -77,5 +72,87 @@ public record GoogleAccount(@NotBlank String name, @NotBlank @Email String email
 				+ "oauthClientSecret=****, oauthRefreshToken=****]")
 			.formatted(name, email, enabled, dryRun, importOtherContacts, preferGoogleProfilePhotos,
 					repairGoogleContactDisplayNames);
+	}
+
+	/** Named construction; the five boolean components read alike at a call site. */
+	public static final class Builder {
+
+		private final String name;
+
+		private final String email;
+
+		private final String appPassword;
+
+		private boolean enabled = true;
+
+		private boolean dryRun;
+
+		private boolean importOtherContacts;
+
+		private String oauthClientId = "";
+
+		private String oauthClientSecret = "";
+
+		private String oauthRefreshToken = "";
+
+		private boolean preferGoogleProfilePhotos;
+
+		private boolean repairGoogleContactDisplayNames;
+
+		private Builder(String name, String email, String appPassword) {
+			this.name = name;
+			this.email = email;
+			this.appPassword = appPassword;
+		}
+
+		public Builder enabled(boolean value) {
+			this.enabled = value;
+			return this;
+		}
+
+		public Builder dryRun(boolean value) {
+			this.dryRun = value;
+			return this;
+		}
+
+		public Builder importOtherContacts(boolean value) {
+			this.importOtherContacts = value;
+			return this;
+		}
+
+		/**
+		 * Sets the OAuth credentials, which only ever authorize anything together.
+		 * @param clientId OAuth client ID
+		 * @param clientSecret OAuth client secret
+		 * @param refreshToken offline OAuth refresh token
+		 * @return this builder
+		 */
+		public Builder oauth(String clientId, String clientSecret, String refreshToken) {
+			this.oauthClientId = clientId;
+			this.oauthClientSecret = clientSecret;
+			this.oauthRefreshToken = refreshToken;
+			return this;
+		}
+
+		public Builder preferGoogleProfilePhotos(boolean value) {
+			this.preferGoogleProfilePhotos = value;
+			return this;
+		}
+
+		public Builder repairGoogleContactDisplayNames(boolean value) {
+			this.repairGoogleContactDisplayNames = value;
+			return this;
+		}
+
+		/**
+		 * Builds the immutable account.
+		 * @return the configured account
+		 */
+		public GoogleAccount build() {
+			return new GoogleAccount(this.name, this.email, this.appPassword, this.enabled, this.dryRun,
+					this.importOtherContacts, this.oauthClientId, this.oauthClientSecret, this.oauthRefreshToken,
+					this.preferGoogleProfilePhotos, this.repairGoogleContactDisplayNames);
+		}
+
 	}
 }

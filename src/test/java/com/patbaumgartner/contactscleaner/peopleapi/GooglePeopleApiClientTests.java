@@ -23,8 +23,10 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class GooglePeopleApiClientTests {
 
-	private static final GoogleAccount ACCOUNT = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password",
-			true, false, true, "client-id", "client-secret", "refresh-token");
+	private static final GoogleAccount ACCOUNT = GoogleAccount.builder("personal", "jane.doe@gmail.com", "app-password")
+		.importOtherContacts(true)
+		.oauth("client-id", "client-secret", "refresh-token")
+		.build();
 
 	private MockRestServiceServer server;
 
@@ -102,8 +104,9 @@ class GooglePeopleApiClientTests {
 
 	@Test
 	void rejectsEnabledImportWithoutOAuthCredentials() {
-		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, false, true,
-				"", "", "");
+		GoogleAccount account = GoogleAccount.builder("personal", "jane.doe@gmail.com", "app-password")
+			.importOtherContacts(true)
+			.build();
 
 		assertThatExceptionOfType(OtherContactsException.class)
 			.isThrownBy(() -> this.client.importOtherContacts(account))
@@ -113,8 +116,7 @@ class GooglePeopleApiClientTests {
 
 	@Test
 	void rejectsProfilePhotoAndNameRepairWithoutOAuthCredentials() {
-		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, false, false,
-				"", "", "");
+		GoogleAccount account = GoogleAccount.builder("personal", "jane.doe@gmail.com", "app-password").build();
 
 		assertThatExceptionOfType(OtherContactsException.class)
 			.isThrownBy(() -> this.client.preferGoogleProfilePhotos(account))

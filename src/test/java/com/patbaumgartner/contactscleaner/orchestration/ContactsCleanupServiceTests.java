@@ -99,7 +99,13 @@ class ContactsCleanupServiceTests {
 	}
 
 	private static GoogleAccount account(boolean dryRun) {
-		return new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, dryRun);
+		return GoogleAccount.builder("personal", "jane.doe@gmail.com", "app-password").dryRun(dryRun).build();
+	}
+
+	private static GoogleAccount.Builder oauthAccount(boolean dryRun) {
+		return GoogleAccount.builder("personal", "jane.doe@gmail.com", "app-password")
+			.dryRun(dryRun)
+			.oauth("client-id", "client-secret", "refresh-token");
 	}
 
 	@Test
@@ -190,8 +196,7 @@ class ContactsCleanupServiceTests {
 
 	@Test
 	void importsOtherContactsAfterTakingACardDavSnapshot() {
-		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, false, true,
-				"client-id", "client-secret", "refresh-token");
+		GoogleAccount account = oauthAccount(false).importOtherContacts(true).build();
 		when(this.otherContactsClient.importOtherContacts(eq(account), anySet(), anySet()))
 			.thenReturn(new OtherContactsImportResult(2, 1, 1, 0));
 		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
@@ -204,8 +209,7 @@ class ContactsCleanupServiceTests {
 
 	@Test
 	void skipsOtherContactsImportDuringDryRun() {
-		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, true, true,
-				"client-id", "client-secret", "refresh-token");
+		GoogleAccount account = oauthAccount(true).importOtherContacts(true).build();
 		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
 
 		service(account, false).cleanAllAccounts();
@@ -215,8 +219,7 @@ class ContactsCleanupServiceTests {
 
 	@Test
 	void prefersGoogleProfilePhotosAndRefreshesTheCardDavSnapshot() {
-		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, false, false,
-				"client-id", "client-secret", "refresh-token", true);
+		GoogleAccount account = oauthAccount(false).preferGoogleProfilePhotos(true).build();
 		when(this.contactPhotoClient.preferGoogleProfilePhotos(account))
 			.thenReturn(new GoogleProfilePhotoResult(3, 1, 2, 0));
 		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
@@ -230,8 +233,7 @@ class ContactsCleanupServiceTests {
 
 	@Test
 	void skipsGoogleProfilePhotoPreferenceDuringDryRun() {
-		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, true, false,
-				"client-id", "client-secret", "refresh-token", true);
+		GoogleAccount account = oauthAccount(true).preferGoogleProfilePhotos(true).build();
 		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
 
 		service(account, false).cleanAllAccounts();
@@ -241,8 +243,7 @@ class ContactsCleanupServiceTests {
 
 	@Test
 	void repairsGoogleContactNamesAndRefreshesTheCardDavSnapshot() {
-		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, false, false,
-				"client-id", "client-secret", "refresh-token", false, true);
+		GoogleAccount account = oauthAccount(false).repairGoogleContactDisplayNames(true).build();
 		when(this.contactNameClient.repairCommaFormattedContactNames(account))
 			.thenReturn(new GoogleContactNameResult(3, 1, 2, 0));
 		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
@@ -256,8 +257,7 @@ class ContactsCleanupServiceTests {
 
 	@Test
 	void skipsGoogleContactNameRepairDuringDryRun() {
-		GoogleAccount account = new GoogleAccount("personal", "jane.doe@gmail.com", "app-password", true, true, false,
-				"client-id", "client-secret", "refresh-token", false, true);
+		GoogleAccount account = oauthAccount(true).repairGoogleContactDisplayNames(true).build();
 		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
 
 		service(account, false).cleanAllAccounts();
@@ -267,7 +267,7 @@ class ContactsCleanupServiceTests {
 
 	@Test
 	void isolatesAccountFailuresAndContinues() {
-		GoogleAccount failing = new GoogleAccount("broken", "broken@gmail.com", "wrong", true, false);
+		GoogleAccount failing = GoogleAccount.builder("broken", "broken@gmail.com", "wrong").build();
 		GoogleAccount healthy = account(false);
 		var accounts = new AccountsProperties(List.of(failing, healthy));
 		var service = service(accounts, CleaningProperties.defaults());
@@ -309,7 +309,7 @@ class ContactsCleanupServiceTests {
 
 	@Test
 	void skipsDisabledAccounts() {
-		GoogleAccount disabled = new GoogleAccount("disabled", "off@gmail.com", "pw", false, false);
+		GoogleAccount disabled = GoogleAccount.builder("disabled", "off@gmail.com", "pw").enabled(false).build();
 		var accounts = new AccountsProperties(List.of(disabled));
 		var service = service(accounts, CleaningProperties.defaults());
 

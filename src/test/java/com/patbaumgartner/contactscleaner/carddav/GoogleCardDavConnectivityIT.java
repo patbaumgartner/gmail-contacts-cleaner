@@ -39,8 +39,11 @@ class GoogleCardDavConnectivityIT {
 			.build();
 		GoogleCardDavClient client = new GoogleCardDavClient(restClient, new MultistatusParser(), properties);
 
-		GoogleAccount account = new GoogleAccount("integration-test", System.getenv("CONTACTS_CLEANER_IT_EMAIL"),
-				System.getenv("CONTACTS_CLEANER_IT_APP_PASSWORD"), true, true);
+		GoogleAccount account = GoogleAccount
+			.builder("integration-test", System.getenv("CONTACTS_CLEANER_IT_EMAIL"),
+					System.getenv("CONTACTS_CLEANER_IT_APP_PASSWORD"))
+			.dryRun(true)
+			.build();
 
 		List<AddressBookEntry> entries = client.fetchAllContacts(account);
 
