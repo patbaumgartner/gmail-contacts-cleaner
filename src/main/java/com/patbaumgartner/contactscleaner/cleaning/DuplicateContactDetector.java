@@ -60,11 +60,11 @@ public class DuplicateContactDetector {
 	}
 
 	/**
-	 * Values shared by more than this many contacts are ignored: a phone number on three
-	 * or more cards is almost certainly a company switchboard (and an e-mail address a
-	 * mailing list), not a duplicated person.
+	 * A phone number or e-mail address shared by exactly two contacts is a duplicated
+	 * person; on three or more cards it is a company switchboard or a mailing list, so
+	 * such values are ignored rather than reported as a pile of false positives.
 	 */
-	static final int MAX_OWNERS_FOR_DUPLICATE = 2;
+	static final int DUPLICATE_OWNER_COUNT = 2;
 
 	/** Index phone numbers and e-mail addresses; contacts sharing a value match. */
 	private void detectSharedValues(List<VCard> vcards, List<DuplicateCandidate> candidates, Set<PairKey> reported) {
@@ -75,12 +75,12 @@ public class DuplicateContactDetector {
 			}
 		}
 		ownersByValue.forEach((value, owners) -> {
-			if (owners.size() != MAX_OWNERS_FOR_DUPLICATE) {
+			if (owners.size() != DUPLICATE_OWNER_COUNT) {
 				return;
 			}
 			int first = owners.get(0);
 			int second = owners.get(1);
-			if (first != second && reported.add(new PairKey(first, second))) {
+			if (reported.add(new PairKey(first, second))) {
 				candidates.add(new DuplicateCandidate(displayName(vcards.get(first)), displayName(vcards.get(second)),
 						"shared " + (value.startsWith("tel:") ? "phone number " : "e-mail address ")
 								+ value.substring(4)));
