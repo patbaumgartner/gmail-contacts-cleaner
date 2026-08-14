@@ -214,9 +214,6 @@
             <format>ALL</format>
           </formats>
           <suppressionFile>${project.basedir}/.mvn/owasp-suppression.xml</suppressionFile>
-          <!-- NVD API Configuration for enhanced vulnerability data. Provide via -DnvdApiKey=... or
-          env var NVD_API_KEY. -->
-          <nvdApiKey>${nvdApiKey}</nvdApiKey>
           <nvdMaxRetryCount>3</nvdMaxRetryCount>
           <nvdApiDelay>2000</nvdApiDelay>
           <!-- Disable analyzers that require external tools not available -->
