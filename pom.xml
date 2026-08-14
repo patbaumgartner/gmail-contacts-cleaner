@@ -59,6 +59,10 @@
 
     <!-- Security & Dependency Management Plugins -->
     <dependency-check.version>13.0.0</dependency-check.version>
+    <!-- Fail on High (7.0) and above. dependency-check only runs in the scheduled
+    `security` workflow, so a newly published CVE never blocks an unrelated PR.
+    Accepted risks belong in .mvn/owasp-suppression.xml with a justification. -->
+    <dependency-check.fail-on-cvss>7</dependency-check.fail-on-cvss>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
 
     <!-- Coverage & Quality Thresholds. Enforced by jacoco:check during `verify`;
@@ -205,7 +209,7 @@
         <artifactId>dependency-check-maven</artifactId>
         <version>${dependency-check.version}</version>
         <configuration>
-          <failBuildOnCVSS>10</failBuildOnCVSS>
+          <failBuildOnCVSS>${dependency-check.fail-on-cvss}</failBuildOnCVSS>
           <skipTestScope>true</skipTestScope>
           <formats>
             <format>ALL</format>
