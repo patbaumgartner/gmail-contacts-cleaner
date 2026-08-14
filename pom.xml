@@ -61,9 +61,10 @@
     <dependency-check.version>13.0.0</dependency-check.version>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
 
-    <!-- Coverage & Quality Thresholds -->
-    <jacoco.branch.coverage.minimum>0.75</jacoco.branch.coverage.minimum>
-    <jacoco.line.coverage.minimum>0.80</jacoco.line.coverage.minimum>
+    <!-- Coverage & Quality Thresholds. Enforced by jacoco:check during `verify`;
+    kept just below the current numbers so a regression fails the build. -->
+    <jacoco.branch.coverage.minimum>0.76</jacoco.branch.coverage.minimum>
+    <jacoco.line.coverage.minimum>0.90</jacoco.line.coverage.minimum>
     <pitest.coverage.threshold>0</pitest.coverage.threshold>
     <pitest.mutation.threshold>0</pitest.mutation.threshold>
 
@@ -339,6 +340,36 @@
               <goal>report</goal>
             </goals>
             <phase>test</phase>
+          </execution>
+          <execution>
+            <id>jacoco-check</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>verify</phase>
+            <configuration>
+              <rules>
+                <rule>
+                  <element>BUNDLE</element>
+                  <limits>
+                    <limit>
+                      <counter>LINE</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>${jacoco.line.coverage.minimum}</minimum>
+                    </limit>
+                    <limit>
+                      <counter>BRANCH</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>${jacoco.branch.coverage.minimum}</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+              <excludes>
+                <exclude>com/patbaumgartner/contactscleaner/ContactsCleanerApplication.class</exclude>
+                <exclude>com/patbaumgartner/contactscleaner/config/**</exclude>
+              </excludes>
+            </configuration>
           </execution>
         </executions>
       </plugin>
