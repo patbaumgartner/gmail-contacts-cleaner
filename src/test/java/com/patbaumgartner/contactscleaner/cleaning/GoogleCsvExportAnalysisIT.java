@@ -42,6 +42,11 @@ class GoogleCsvExportAnalysisIT {
 
 	private static final Path EXPORT = Path.of("test-data", "contacts.csv");
 
+	/**
+	 * Never the repository's own reports/ directory — the export contains personal data.
+	 */
+	private static final String ANALYSIS_REPORT_DIRECTORY = "target/analysis-report";
+
 	private static final int MAX_SAMPLE_DIFFS = 15;
 
 	private static final int MAX_LISTED = 25;
@@ -144,7 +149,7 @@ class GoogleCsvExportAnalysisIT {
 
 	/**
 	 * Renders the production HTML report from the export as a simulated dry run — open
-	 * reports/cleanup-report-latest.html in a browser for the visual check.
+	 * the report in a browser for the visual check.
 	 */
 	private void writeHtmlReport(CleaningProperties properties) throws Exception {
 		List<VCard> contacts = GoogleCsvContacts.read(EXPORT);
@@ -167,9 +172,10 @@ class GoogleCsvExportAnalysisIT {
 		var result = new AccountCleanupResult("export-analysis (simulated)", true, contacts.size(), updated, 0,
 				duplicates, changes, OtherContactsImportResult.EMPTY, GoogleProfilePhotoResult.EMPTY, true,
 				GoogleContactNameResult.EMPTY, 0, "Simulated from " + EXPORT);
-		new HtmlReportWriter(new ReportProperties(true, "reports"))
+		new HtmlReportWriter(new ReportProperties(true, ANALYSIS_REPORT_DIRECTORY, 30))
 			.onCleanupRunCompleted(new CleanupRunCompleted(java.time.Instant.now(), List.of(result)));
-		section("HTML REPORT written to reports/cleanup-report-latest.html — open it in a browser");
+		section("HTML REPORT written to " + ANALYSIS_REPORT_DIRECTORY
+				+ "/cleanup-report-latest.html — open it in a browser");
 	}
 
 	/** What would the opt-in shared-office-number removal do? */
