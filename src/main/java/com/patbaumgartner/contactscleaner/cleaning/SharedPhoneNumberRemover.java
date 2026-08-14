@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
  * Cross-contact rule: removes phone numbers that appear on many different contacts.
  *
  * <p>
- * A number stored on three or more cards is practically never a personal line — it is the
+ * A number stored on several cards is practically never a personal line — it is the
  * company switchboard, reception or a shared office number that a bulk import copied onto
  * every colleague. Keeping only direct numbers makes the address book dial the right
  * person instead of the front desk.
@@ -30,8 +30,8 @@ import org.springframework.stereotype.Component;
  * (destructive); enable via
  * {@code contacts-cleaner.cleaning.remove-shared-phone-numbers=true}. The minimum number
  * of contacts sharing a number before it is considered an office line is configurable via
- * {@code contacts-cleaner.cleaning.shared-phone-number-threshold} (default {@code 3} — a
- * landline shared by a couple is preserved).
+ * {@code contacts-cleaner.cleaning.shared-phone-number-threshold} (default {@code 2};
+ * raise it to {@code 3} to preserve a landline shared by a couple).
  */
 @Component
 public class SharedPhoneNumberRemover {

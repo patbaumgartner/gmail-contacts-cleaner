@@ -12,13 +12,20 @@ import ezvcard.property.Telephone;
 import ezvcard.property.Url;
 
 /**
- * Removes properties whose value is entirely blank — classic debris left behind by years
- * of syncing across devices and import/export round trips: empty {@code TEL},
- * {@code EMAIL}, {@code URL} and {@code NOTE} lines, organizations whose units are all
- * blank ({@code ORG:;;}), and addresses with every component empty.
+ * Removes properties that carry no usable value — classic debris left behind by years of
+ * syncing across devices and import/export round trips: empty {@code TEL}, {@code EMAIL},
+ * {@code URL} and {@code NOTE} lines, organizations whose units are all blank
+ * ({@code ORG:;;}), and blank or duplicated {@code X-} properties.
  *
  * <p>
- * This is considered non-destructive: a blank property carries no information.
+ * Addresses are held to a slightly stricter standard: one is dropped unless it has at
+ * least a PO box, street, extended address, region or postal code. An {@code ADR} whose
+ * only content is a city and/or a country ({@code ;;;Zurich;;;Switzerland}) cannot be
+ * mailed to and is check-in or import debris rather than a postal address.
+ *
+ * <p>
+ * This is considered non-destructive: none of the removed values could be used to reach
+ * the contact.
  */
 final class EmptyPropertyRemovalRule implements VCardCleaningRule {
 
@@ -88,6 +95,7 @@ final class EmptyPropertyRemovalRule implements VCardCleaningRule {
 		return changed;
 	}
 
+	/** A city and/or country alone is not something an envelope can be addressed to. */
 	private boolean isBlankOrLocationOnly(Address address) {
 		return isBlank(address.getStreetAddress()) && isBlank(address.getExtendedAddress())
 				&& isBlank(address.getPoBox()) && isBlank(address.getRegion()) && isBlank(address.getPostalCode());

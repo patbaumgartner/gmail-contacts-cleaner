@@ -26,8 +26,8 @@ import ezvcard.property.VCardProperty;
  * The rule finds groups whose {@code X-ABLabel} matches a configured label
  * (case-insensitive) and removes <em>every</em> property of that group, plus standalone
  * extended properties named {@code X-<label>} (e.g. {@code X-AGE}). Configure the labels
- * via {@code contacts-cleaner.cleaning.remove-custom-fields} (default: {@code Age}); an
- * empty list disables the rule.
+ * via {@code contacts-cleaner.cleaning.remove-custom-fields} (default:
+ * {@code Age,Photo}); an empty list disables the rule.
  */
 final class CustomFieldRemovalRule implements VCardCleaningRule {
 
