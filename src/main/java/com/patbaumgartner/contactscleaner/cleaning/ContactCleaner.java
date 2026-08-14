@@ -133,18 +133,17 @@ public class ContactCleaner {
 	/**
 	 * Cleans the given vCard in place.
 	 * @param vcard the vCard to clean
-	 * @return whether the vCard changed and whether it is empty (deletion candidate)
+	 * @return whether any rule modified the vCard, i.e. whether it must be written back
 	 */
-	public CleaningResult clean(VCard vcard) {
+	public boolean clean(VCard vcard) {
 		boolean changed = false;
 		for (VCardCleaningRule rule : rules) {
 			changed |= rule.apply(vcard);
 		}
-		boolean empty = isDeletableEmptyContact(vcard);
 		if (log.isTraceEnabled()) {
-			log.trace("Cleaned contact '{}': changed={}, empty={}", displayName(vcard), changed, empty);
+			log.trace("Cleaned contact '{}': changed={}", displayName(vcard), changed);
 		}
-		return new CleaningResult(changed, empty);
+		return changed;
 	}
 
 	/**

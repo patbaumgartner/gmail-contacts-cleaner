@@ -115,8 +115,7 @@ class GoogleCsvExportAnalysisIT {
 		int empty = 0;
 		for (VCard vcard : contacts) {
 			List<String> before = snapshot(vcard);
-			CleaningResult result = cleaner.clean(vcard);
-			if (result.changed()) {
+			if (cleaner.clean(vcard)) {
 				changed++;
 				List<String> after = snapshot(vcard);
 				if (diffs.size() < MAX_SAMPLE_DIFFS) {
@@ -155,7 +154,7 @@ class GoogleCsvExportAnalysisIT {
 		java.util.Map<VCard, List<String>> snapshots = new java.util.IdentityHashMap<>();
 		for (VCard vcard : contacts) {
 			snapshots.put(vcard, snapshot(vcard));
-			if (cleaner.clean(vcard).changed()) {
+			if (cleaner.clean(vcard)) {
 				updated++;
 				List<String> before = snapshots.get(vcard);
 				List<String> after = snapshot(vcard);
