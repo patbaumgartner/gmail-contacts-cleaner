@@ -6,6 +6,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Stream;
 
 import com.patbaumgartner.contactscleaner.orchestration.AccountCleanupResult;
 import com.patbaumgartner.contactscleaner.orchestration.CleanupRunCompleted;
@@ -31,6 +35,10 @@ public class HtmlReportWriter {
 
 	private static final Logger log = LoggerFactory.getLogger(HtmlReportWriter.class);
 
+	private static final String TIMESTAMPED_PREFIX = "cleanup-report-";
+
+	private static final String LATEST_REPORT = "cleanup-report-latest.html";
+
 	private static final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
 		.withZone(ZoneId.systemDefault());
 
@@ -52,13 +60,38 @@ public class HtmlReportWriter {
 			Path directory = Path.of(this.properties.directory());
 			Files.createDirectories(directory);
 			String html = render(event);
-			Path report = directory.resolve("cleanup-report-" + FILE_TIMESTAMP.format(event.completedAt()) + ".html");
+			Path report = directory.resolve(TIMESTAMPED_PREFIX + FILE_TIMESTAMP.format(event.completedAt()) + ".html");
 			Files.writeString(report, html, StandardCharsets.UTF_8);
-			Files.writeString(directory.resolve("cleanup-report-latest.html"), html, StandardCharsets.UTF_8);
+			Files.writeString(directory.resolve(LATEST_REPORT), html, StandardCharsets.UTF_8);
 			log.info("HTML report written to {}", report.toAbsolutePath());
+			pruneOldReports(directory);
 		}
 		catch (IOException ex) {
 			log.error("Failed to write HTML report", ex);
+		}
+	}
+
+	/**
+	 * Keeps only the newest {@code retain} timestamped reports. Nightly server-mode runs
+	 * would otherwise grow the volume forever. File names embed a sortable timestamp, so
+	 * lexicographic order is chronological order.
+	 */
+	private void pruneOldReports(Path directory) throws IOException {
+		List<Path> timestamped;
+		try (Stream<Path> files = Files.list(directory)) {
+			timestamped = files.filter((file) -> file.getFileName().toString().startsWith(TIMESTAMPED_PREFIX))
+				.filter((file) -> !file.getFileName().toString().equals(LATEST_REPORT))
+				.sorted(Comparator.comparing((Path file) -> file.getFileName().toString()).reversed())
+				.toList();
+		}
+		for (Path outdated : timestamped.stream().skip(this.properties.retain()).toList()) {
+			try {
+				Files.delete(outdated);
+				log.debug("Deleted outdated report {}", outdated.getFileName());
+			}
+			catch (IOException ex) {
+				log.warn("Could not delete outdated report {}", outdated.getFileName(), ex);
+			}
 		}
 	}
 
@@ -109,9 +142,7 @@ public class HtmlReportWriter {
 		}
 
 		for (ContactChange change : result.changes()) {
-			body.append("<article class=\"change ")
-				.append(change.type().name().toLowerCase(java.util.Locale.ROOT))
-				.append("\">");
+			body.append("<article class=\"change ").append(change.type().name().toLowerCase(Locale.ROOT)).append("\">");
 			body.append("<h3>").append(badge(change.type())).append(escape(change.contactName())).append("</h3>");
 			change.removedLines()
 				.forEach((line) -> body.append("<div class=\"line del\">− ").append(escape(line)).append("</div>"));

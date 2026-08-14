@@ -150,6 +150,9 @@ contacts-cleaner:
   report:
     enabled: "${CONTACTS_CLEANER_REPORT_ENABLED:true}"
     directory: "${CONTACTS_CLEANER_REPORT_DIRECTORY:reports}"
+    # Timestamped reports to keep; older ones are deleted after each run so a
+    # nightly server-mode container cannot fill its volume. 'latest' is never pruned.
+    retain: "${CONTACTS_CLEANER_REPORT_RETAIN:30}"
 
   # Accounts are configured via environment variables (relaxed binding) or a local
   # .env / application-local.yml. Example:

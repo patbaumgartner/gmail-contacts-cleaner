@@ -65,5 +65,6 @@ services:
 
       # ── HTML report (mounted to ./reports on the host) ────────────────────────
       CONTACTS_CLEANER_REPORT_DIRECTORY: /reports
+      CONTACTS_CLEANER_REPORT_RETAIN: "${CONTACTS_CLEANER_REPORT_RETAIN:-30}"
     volumes:
       - ./reports:/reports

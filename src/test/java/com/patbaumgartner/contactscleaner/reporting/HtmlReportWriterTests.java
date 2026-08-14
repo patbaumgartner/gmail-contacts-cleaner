@@ -3,6 +3,7 @@ package com.patbaumgartner.contactscleaner.reporting;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.patbaumgartner.contactscleaner.cleaning.DuplicateCandidate;
@@ -37,7 +38,7 @@ class HtmlReportWriterTests {
 
 	@Test
 	void writesTimestampedAndLatestReport() throws Exception {
-		var writer = new HtmlReportWriter(new ReportProperties(true, this.reportDirectory.toString()));
+		var writer = new HtmlReportWriter(new ReportProperties(true, this.reportDirectory.toString(), 30));
 
 		writer.onCleanupRunCompleted(event());
 
@@ -69,12 +70,48 @@ class HtmlReportWriterTests {
 
 	@Test
 	void doesNothingWhenDisabled() throws Exception {
-		var writer = new HtmlReportWriter(new ReportProperties(false, this.reportDirectory.toString()));
+		var writer = new HtmlReportWriter(new ReportProperties(false, this.reportDirectory.toString(), 30));
 
 		writer.onCleanupRunCompleted(event());
 
 		try (var files = Files.list(this.reportDirectory)) {
 			assertThat(files).isEmpty();
+		}
+	}
+
+	@Test
+	void keepsOnlyTheNewestTimestampedReports() throws Exception {
+		var writer = new HtmlReportWriter(new ReportProperties(true, this.reportDirectory.toString(), 2));
+
+		List<String> writtenInOrder = new ArrayList<>();
+		for (int day = 1; day <= 4; day++) {
+			writer.onCleanupRunCompleted(new CleanupRunCompleted(
+					Instant.parse("2026-07-0%d T02:00:00Z".formatted(day).replace(" ", "")), event().results()));
+			timestampedReports().stream().filter((name) -> !writtenInOrder.contains(name)).forEach(writtenInOrder::add);
+		}
+
+		assertThat(writtenInOrder).hasSize(4);
+		assertThat(timestampedReports()).containsExactlyInAnyOrderElementsOf(writtenInOrder.subList(2, 4));
+		assertThat(this.reportDirectory.resolve("cleanup-report-latest.html")).exists();
+	}
+
+	@Test
+	void neverPrunesTheLatestReportAlias() throws Exception {
+		var writer = new HtmlReportWriter(new ReportProperties(true, this.reportDirectory.toString(), 1));
+
+		writer.onCleanupRunCompleted(new CleanupRunCompleted(Instant.parse("2026-07-01T02:00:00Z"), event().results()));
+		writer.onCleanupRunCompleted(new CleanupRunCompleted(Instant.parse("2026-07-02T02:00:00Z"), event().results()));
+
+		assertThat(timestampedReports()).hasSize(1);
+		assertThat(this.reportDirectory.resolve("cleanup-report-latest.html")).exists();
+	}
+
+	private List<String> timestampedReports() throws Exception {
+		try (var files = Files.list(this.reportDirectory)) {
+			return files.map((file) -> file.getFileName().toString())
+				.filter((name) -> !name.equals("cleanup-report-latest.html"))
+				.sorted()
+				.toList();
 		}
 	}
 
