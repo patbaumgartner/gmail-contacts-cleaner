@@ -1,5 +1,5 @@
 ##############################################################################
-# Swiss Coupon Booster – .gitattributes
+# Gmail Contacts Cleaner – .gitattributes
 # Normalises line endings so Java (LF) and Windows scripts (CRLF) are handled
 # correctly across platforms.
 ##############################################################################
@@ -29,8 +29,8 @@ Dockerfile    text eol=lf
 
 # ── Maven wrapper ─────────────────────────────────────────────────────────────
 # mvnw must use LF even on Windows, mvnw.cmd must use CRLF
-coupon-booster/mvnw     text eol=lf
-coupon-booster/mvnw.cmd text eol=crlf
+mvnw     text eol=lf
+mvnw.cmd text eol=crlf
 
 # ── Documentation ─────────────────────────────────────────────────────────────
 *.md          text eol=lf
