@@ -46,8 +46,8 @@ jobs:
 
       - name: Build, test & verify
         # OWASP dependency-check is skipped here (it downloads the full NVD feed).
-        # Run it from the release pipeline or a dedicated scheduled workflow instead.
-        run: ./mvnw clean verify -ntp -Dmaven.test.failure.ignore=true -Ddependency-check.skip=true
+        # The scheduled `security` workflow runs it against `main`.
+        run: ./mvnw clean verify -ntp -Ddependency-check.skip=true
         env:
           MAVEN_OPTS: ${{ env.MAVEN_OPTS }}
 

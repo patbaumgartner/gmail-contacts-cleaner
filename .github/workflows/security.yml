@@ -1,0 +1,63 @@
+name: Security
+
+# Vulnerability scanning that is deliberately kept out of the PR pipeline: OWASP
+# dependency-check downloads the full NVD feed, and a new CVE published upstream
+# must not turn an unrelated pull request red. It runs on a schedule instead, so
+# findings surface as a failed run on `main` that can be triaged deliberately.
+
+on:
+  schedule:
+    # Mondays 05:00 UTC, before the Dependabot run at 06:00 Europe/Zurich.
+    - cron: "0 5 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - "pom.xml"
+      - ".mvn/owasp-suppression.xml"
+      - ".github/workflows/security.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: "25"
+
+jobs:
+  dependency-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    # Without an NVD API key the feed download is heavily rate-limited.
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Cache NVD database
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: dependency-check-data-${{ github.run_id }}
+          restore-keys: dependency-check-data-
+
+      - name: Run dependency-check
+        run: ./mvnw -B -ntp dependency-check:check -DnvdApiKey="$NVD_API_KEY"
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+      - name: Upload reports
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: dependency-check-report
+          path: target/dependency-check-report.*
+          retention-days: 30
+          if-no-files-found: ignore
