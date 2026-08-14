@@ -50,8 +50,9 @@ jobs:
 
       - name: Run dependency-check
         run: |
-          if [[ -n "$NVD_API_KEY_VALUE" ]]; then
-            ./mvnw -B -ntp dependency-check:check -DnvdApiKey="$NVD_API_KEY_VALUE"
+          NVD_API_KEY="$(printf '%s' "$NVD_API_KEY_VALUE" | tr -d '[:space:]')"
+          if [[ -n "$NVD_API_KEY" ]]; then
+            ./mvnw -B -ntp dependency-check:check -DnvdApiKey="$NVD_API_KEY"
           else
             ./mvnw -B -ntp dependency-check:check
           fi
