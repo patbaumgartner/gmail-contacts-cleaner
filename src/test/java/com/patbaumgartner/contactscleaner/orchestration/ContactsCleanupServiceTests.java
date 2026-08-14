@@ -14,6 +14,7 @@ import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
 import com.patbaumgartner.contactscleaner.cleaning.EmailDomainVerifier;
 import com.patbaumgartner.contactscleaner.cleaning.OrganizationCanonicalizer;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
+import com.patbaumgartner.contactscleaner.peopleapi.ContactIdentifiers;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsClient;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
 import com.patbaumgartner.contactscleaner.peopleapi.ContactNameClient;
@@ -31,7 +32,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -197,13 +197,17 @@ class ContactsCleanupServiceTests {
 	@Test
 	void importsOtherContactsAfterTakingACardDavSnapshot() {
 		GoogleAccount account = oauthAccount(false).importOtherContacts(true).build();
-		when(this.otherContactsClient.importOtherContacts(eq(account), anySet(), anySet()))
+		when(this.otherContactsClient.importOtherContacts(eq(account), any(ContactIdentifiers.class)))
 			.thenReturn(new OtherContactsImportResult(2, 1, 1, 0));
-		when(this.cardDavClient.fetchAllContacts(account)).thenReturn(List.of());
+		when(this.cardDavClient.fetchAllContacts(account))
+			.thenReturn(List.of(new AddressBookEntry("/contacts/dirty", "\"e1\"", DIRTY_VCARD)));
 
 		service(account, false).cleanAllAccounts();
 
-		verify(this.otherContactsClient).importOtherContacts(eq(account), anySet(), anySet());
+		ArgumentCaptor<ContactIdentifiers> knownContacts = ArgumentCaptor.forClass(ContactIdentifiers.class);
+		verify(this.otherContactsClient).importOtherContacts(eq(account), knownContacts.capture());
+		assertThat(knownContacts.getValue().emailAddresses()).containsExactly("jane.doe@gmail.com");
+		assertThat(knownContacts.getValue().phoneNumbers()).containsExactly("41446681800");
 		verify(this.cardDavClient, times(2)).fetchAllContacts(account);
 	}
 
@@ -214,7 +218,7 @@ class ContactsCleanupServiceTests {
 
 		service(account, false).cleanAllAccounts();
 
-		verify(this.otherContactsClient, never()).importOtherContacts(any(), anySet(), anySet());
+		verify(this.otherContactsClient, never()).importOtherContacts(any(), any(ContactIdentifiers.class));
 	}
 
 	@Test

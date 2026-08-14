@@ -95,8 +95,8 @@ class GooglePeopleApiClientTests {
 					"https://people.googleapis.com/v1/otherContacts/failing:copyOtherContactToMyContactsGroup"))
 			.andRespond(withServerError());
 
-		OtherContactsImportResult result = this.client.importOtherContacts(ACCOUNT, Set.of("existing@example.test"),
-				Set.of());
+		OtherContactsImportResult result = this.client.importOtherContacts(ACCOUNT,
+				ContactIdentifiers.of(Set.of("Existing@Example.test"), Set.of()));
 
 		assertThat(result).isEqualTo(new OtherContactsImportResult(2, 0, 1, 1));
 		this.server.verify();
