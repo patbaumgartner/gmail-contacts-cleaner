@@ -13,6 +13,11 @@ class ContactCleanerTests {
 		return CleaningProperties.defaults();
 	}
 
+	private static boolean cleanedIsDeletable(ContactCleaner cleaner, VCard vcard) {
+		cleaner.clean(vcard);
+		return cleaner.isDeletableEmptyContact(vcard);
+	}
+
 	@Test
 	void appliesNormalizationAndDeduplicationInOrder() {
 		ContactCleaner cleaner = new ContactCleaner(defaults());
@@ -22,10 +27,8 @@ class ContactCleanerTests {
 		vcard.addEmail(new Email("Jane.Doe@gmail.com"));
 		vcard.addEmail(new Email("jane.doe@gmail.com"));
 
-		CleaningResult result = cleaner.clean(vcard);
-
-		assertThat(result.changed()).isTrue();
-		assertThat(result.empty()).isFalse();
+		assertThat(cleaner.clean(vcard)).isTrue();
+		assertThat(cleaner.isDeletableEmptyContact(vcard)).isFalse();
 		assertThat(vcard.getTelephoneNumbers()).extracting(Telephone::getText).containsExactly("+41446681800");
 		assertThat(vcard.getEmails()).extracting(Email::getValue).containsExactly("jane.doe@gmail.com");
 	}
@@ -37,7 +40,7 @@ class ContactCleanerTests {
 		vcard.addTelephoneNumber(new Telephone("+41446681800"));
 		vcard.addEmail(new Email("contact@gmail.com"));
 
-		assertThat(cleaner.clean(vcard).changed()).isFalse();
+		assertThat(cleaner.clean(vcard)).isFalse();
 	}
 
 	@Test
@@ -45,10 +48,10 @@ class ContactCleanerTests {
 		VCard emptyContact = new VCard();
 
 		ContactCleaner conservative = new ContactCleaner(defaults());
-		assertThat(conservative.clean(emptyContact).empty()).isFalse();
+		assertThat(cleanedIsDeletable(conservative, emptyContact)).isFalse();
 
 		ContactCleaner destructive = new ContactCleaner(defaults().toBuilder().deleteEmptyContacts(true).build());
-		assertThat(destructive.clean(emptyContact).empty()).isTrue();
+		assertThat(cleanedIsDeletable(destructive, emptyContact)).isTrue();
 	}
 
 	@Test
@@ -57,7 +60,7 @@ class ContactCleanerTests {
 		VCard vcard = new VCard();
 		vcard.setBirthday(new ezvcard.property.Birthday(java.time.LocalDate.of(1980, 3, 12)));
 
-		assertThat(cleaner.clean(vcard).empty()).isFalse();
+		assertThat(cleanedIsDeletable(cleaner, vcard)).isFalse();
 	}
 
 	@Test
@@ -66,7 +69,7 @@ class ContactCleanerTests {
 		VCard vcard = new VCard();
 		vcard.setBirthday(new ezvcard.property.Birthday(java.time.LocalDate.of(1980, 3, 12)));
 
-		assertThat(cleaner.clean(vcard).empty()).isTrue();
+		assertThat(cleanedIsDeletable(cleaner, vcard)).isTrue();
 	}
 
 	@Test
@@ -76,7 +79,7 @@ class ContactCleanerTests {
 		vcard.setBirthday(new ezvcard.property.Birthday(java.time.LocalDate.of(1980, 3, 12)));
 		vcard.addEmail(new Email("jane@example.com"));
 
-		assertThat(cleaner.clean(vcard).empty()).isFalse();
+		assertThat(cleanedIsDeletable(cleaner, vcard)).isFalse();
 	}
 
 	@Test
@@ -86,7 +89,7 @@ class ContactCleanerTests {
 		VCard vcard = new VCard();
 		vcard.setFormattedName(new ezvcard.property.FormattedName("\"Muster, Max\""));
 
-		assertThat(cleaner.clean(vcard).changed()).isFalse();
+		assertThat(cleaner.clean(vcard)).isFalse();
 		assertThat(vcard.getFormattedName().getValue()).isEqualTo("\"Muster, Max\"");
 	}
 
@@ -96,7 +99,7 @@ class ContactCleanerTests {
 		VCard vcard = new VCard();
 		vcard.setFormattedName(new ezvcard.property.FormattedName("\"Jane Doe\""));
 
-		assertThat(cleaner.clean(vcard).changed()).isFalse();
+		assertThat(cleaner.clean(vcard)).isFalse();
 		assertThat(vcard.getFormattedName().getValue()).isEqualTo("\"Jane Doe\"");
 	}
 
@@ -106,7 +109,7 @@ class ContactCleanerTests {
 		VCard vcard = new VCard();
 		vcard.setFormattedName(new ezvcard.property.FormattedName("Muster, Max"));
 
-		assertThat(cleaner.clean(vcard).changed()).isFalse();
+		assertThat(cleaner.clean(vcard)).isFalse();
 		assertThat(vcard.getFormattedName().getValue()).isEqualTo("Muster, Max");
 	}
 
@@ -116,7 +119,7 @@ class ContactCleanerTests {
 		VCard vcard = new VCard();
 		vcard.addEmail(new Email("jane.doe@example.com"));
 
-		assertThat(cleaner.clean(vcard).changed()).isFalse();
+		assertThat(cleaner.clean(vcard)).isFalse();
 		assertThat(vcard.getStructuredName()).isNull();
 	}
 
@@ -128,7 +131,7 @@ class ContactCleanerTests {
 		vcard.addEmail(new Email("Jane@FORMER.EXAMPLE"));
 		vcard.addEmail(new Email("jane@example.com"));
 
-		assertThat(cleaner.clean(vcard).changed()).isTrue();
+		assertThat(cleaner.clean(vcard)).isTrue();
 		assertThat(vcard.getEmails()).extracting(Email::getValue).containsExactly("jane@example.com");
 	}
 
@@ -138,7 +141,7 @@ class ContactCleanerTests {
 		VCard vcard = new VCard();
 		vcard.addNote("wedding photographer of Anna");
 
-		assertThat(cleaner.clean(vcard).empty()).isFalse();
+		assertThat(cleanedIsDeletable(cleaner, vcard)).isFalse();
 	}
 
 	@Test
@@ -147,7 +150,7 @@ class ContactCleanerTests {
 		VCard vcard = new VCard();
 		vcard.addTelephoneNumber(new Telephone("+41446681800"));
 
-		assertThat(cleaner.clean(vcard).empty()).isFalse();
+		assertThat(cleanedIsDeletable(cleaner, vcard)).isFalse();
 	}
 
 	@Test
@@ -156,11 +159,11 @@ class ContactCleanerTests {
 		vcard.addNote("legacy sync note");
 
 		ContactCleaner conservative = new ContactCleaner(defaults());
-		assertThat(conservative.clean(vcard).changed()).isFalse();
+		assertThat(conservative.clean(vcard)).isFalse();
 		assertThat(vcard.getNotes()).hasSize(1);
 
 		ContactCleaner destructive = new ContactCleaner(defaults().toBuilder().removeNotes(true).build());
-		assertThat(destructive.clean(vcard).changed()).isTrue();
+		assertThat(destructive.clean(vcard)).isTrue();
 		assertThat(vcard.getNotes()).isEmpty();
 	}
 
@@ -180,7 +183,7 @@ class ContactCleanerTests {
 		vcard.addTelephoneNumber(new Telephone("+41 44 668 18 00"));
 		vcard.addEmail(new Email("Contact@GMAIL.com"));
 
-		assertThat(cleaner.clean(vcard).changed()).isFalse();
+		assertThat(cleaner.clean(vcard)).isFalse();
 		assertThat(vcard.getTelephoneNumbers().getFirst().getText()).isEqualTo("+41 44 668 18 00");
 		assertThat(vcard.getEmails().getFirst().getValue()).isEqualTo("Contact@GMAIL.com");
 	}

@@ -176,7 +176,7 @@ public class ContactsCleanupService {
 					continue;
 				}
 				snapshots.put(vcard, VCardSnapshot.of(vcard));
-				if (contactCleaner.clean(vcard).changed()) {
+				if (contactCleaner.clean(vcard)) {
 					changedContacts.add(vcard);
 				}
 				parsedEntries.add(entry);
