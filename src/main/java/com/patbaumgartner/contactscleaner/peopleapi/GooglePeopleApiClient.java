@@ -48,8 +48,7 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient, 
 	}
 
 	@Override
-	public OtherContactsImportResult importOtherContacts(GoogleAccount account, Set<String> knownEmailAddresses,
-			Set<String> knownPhoneNumbers) {
+	public OtherContactsImportResult importOtherContacts(GoogleAccount account, ContactIdentifiers knownContacts) {
 		if (!account.hasOtherContactsImportCredentials()) {
 			throw new OtherContactsException(("Other contacts import for account '%s' requires OAuth client ID, "
 					+ "client secret, and refresh token")
@@ -61,8 +60,8 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient, 
 			int promoted = 0;
 			int skipped = 0;
 			int failed = 0;
-			Set<String> knownEmails = new HashSet<>(knownEmailAddresses);
-			Set<String> knownPhones = new HashSet<>(knownPhoneNumbers);
+			Set<String> knownEmails = new HashSet<>(knownContacts.emailAddresses());
+			Set<String> knownPhones = new HashSet<>(knownContacts.phoneNumbers());
 			Integer totalSize = null;
 			String pageToken = null;
 			do {
@@ -365,37 +364,21 @@ class GooglePeopleApiClient implements OtherContactsClient, ContactPhotoClient, 
 		return contact.emailAddresses()
 			.stream()
 			.map(EmailAddress::value)
-			.map(this::normalizeEmail)
+			.map(ContactIdentifiers::normalizeEmail)
 			.anyMatch(knownEmails::contains)
 				|| contact.phoneNumbers()
 					.stream()
 					.map(PhoneNumber::value)
-					.map(this::normalizePhone)
+					.map(ContactIdentifiers::normalizePhone)
 					.anyMatch(knownPhones::contains);
 	}
 
 	private void addContactIdentifiers(Person contact, Set<String> knownEmails, Set<String> knownPhones) {
-		contact.emailAddresses()
-			.stream()
-			.map(EmailAddress::value)
-			.map(this::normalizeEmail)
-			.filter((value) -> !value.isEmpty())
-			.forEach(knownEmails::add);
-		contact.phoneNumbers()
-			.stream()
-			.map(PhoneNumber::value)
-			.map(this::normalizePhone)
-			.filter((value) -> !value.isEmpty())
-			.forEach(knownPhones::add);
-	}
-
-	private String normalizeEmail(String value) {
-		return (value != null) ? value.trim().toLowerCase(Locale.ROOT) : "";
-	}
-
-	private String normalizePhone(String value) {
-		String digits = (value != null) ? value.replaceAll("\\D", "") : "";
-		return digits.startsWith("00") ? digits.substring(2) : digits;
+		ContactIdentifiers promoted = ContactIdentifiers.of(
+				contact.emailAddresses().stream().map(EmailAddress::value).toList(),
+				contact.phoneNumbers().stream().map(PhoneNumber::value).toList());
+		knownEmails.addAll(promoted.emailAddresses());
+		knownPhones.addAll(promoted.phoneNumbers());
 	}
 
 	private void copyToMyContacts(String accessToken, String resourceName) {

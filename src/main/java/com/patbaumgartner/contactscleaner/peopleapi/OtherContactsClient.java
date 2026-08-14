@@ -1,7 +1,5 @@
 package com.patbaumgartner.contactscleaner.peopleapi;
 
-import java.util.Set;
-
 import com.patbaumgartner.contactscleaner.account.GoogleAccount;
 
 /**
@@ -15,18 +13,16 @@ public interface OtherContactsClient {
 	 * @return the import outcome
 	 */
 	default OtherContactsImportResult importOtherContacts(GoogleAccount account) {
-		return importOtherContacts(account, Set.of(), Set.of());
+		return importOtherContacts(account, ContactIdentifiers.NONE);
 	}
 
 	/**
 	 * Lists all Other contacts and promotes only those without a matching regular
 	 * contact.
 	 * @param account account whose OAuth credentials authorize the import
-	 * @param knownEmailAddresses normalized e-mail addresses already in My Contacts
-	 * @param knownPhoneNumbers normalized phone numbers already in My Contacts
+	 * @param knownContacts identifiers of the contacts already in My Contacts
 	 * @return the import outcome
 	 */
-	OtherContactsImportResult importOtherContacts(GoogleAccount account, Set<String> knownEmailAddresses,
-			Set<String> knownPhoneNumbers);
+	OtherContactsImportResult importOtherContacts(GoogleAccount account, ContactIdentifiers knownContacts);
 
 }

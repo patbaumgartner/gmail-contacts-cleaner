@@ -2,10 +2,9 @@ package com.patbaumgartner.contactscleaner.orchestration;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,6 +20,7 @@ import com.patbaumgartner.contactscleaner.cleaning.DuplicateContactDetector;
 import com.patbaumgartner.contactscleaner.cleaning.EmailDomainVerifier;
 import com.patbaumgartner.contactscleaner.cleaning.OrganizationCanonicalizer;
 import com.patbaumgartner.contactscleaner.cleaning.SharedPhoneNumberRemover;
+import com.patbaumgartner.contactscleaner.peopleapi.ContactIdentifiers;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsClient;
 import com.patbaumgartner.contactscleaner.peopleapi.OtherContactsImportResult;
 import com.patbaumgartner.contactscleaner.peopleapi.ContactNameClient;
@@ -30,8 +30,6 @@ import com.patbaumgartner.contactscleaner.peopleapi.GoogleProfilePhotoResult;
 import ezvcard.Ezvcard;
 import ezvcard.VCard;
 import ezvcard.VCardVersion;
-import ezvcard.property.Email;
-import ezvcard.property.Telephone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +56,8 @@ import org.springframework.stereotype.Service;
 public class ContactsCleanupService {
 
 	private static final Logger log = LoggerFactory.getLogger(ContactsCleanupService.class);
+
+	private static final int PROGRESS_INTERVAL = 100;
 
 	private final AccountsProperties accountsProperties;
 
@@ -142,18 +142,15 @@ public class ContactsCleanupService {
 			List<AddressBookEntry> entries = cardDavClient.fetchAllContacts(account);
 			log.info("Step complete: fetched {} CardDAV contacts for account '{}'", entries.size(), account.name());
 			boolean refreshEntries = false;
-			if (importsOtherContacts(account)) {
-				log.info("Step: importing Other contacts for account '{}'", account.name());
+			if (runsPeopleApiPass(account, account.importOtherContacts(), "Other contacts import")) {
 				otherContactsImport = importOtherContacts(account, entries);
 				refreshEntries = true;
 			}
-			if (prefersGoogleProfilePhotos(account)) {
-				log.info("Step: preferring Google profile photos for account '{}'", account.name());
+			if (runsPeopleApiPass(account, account.preferGoogleProfilePhotos(), "Google profile photo preference")) {
 				googleProfilePhotos = preferGoogleProfilePhotos(account);
 				refreshEntries = true;
 			}
-			if (repairsGoogleContactDisplayNames(account)) {
-				log.info("Step: repairing comma-form Google contact names for account '{}'", account.name());
+			if (runsPeopleApiPass(account, account.repairGoogleContactDisplayNames(), "Google contact-name repair")) {
 				googleContactNames = repairGoogleContactDisplayNames(account);
 				refreshEntries = true;
 			}
@@ -171,7 +168,7 @@ public class ContactsCleanupService {
 			List<AddressBookEntry> parsedEntries = new ArrayList<>();
 			List<VCard> vcards = new ArrayList<>();
 			Map<VCard, List<String>> snapshots = new IdentityHashMap<>();
-			Set<VCard> changedContacts = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+			Set<VCard> changedContacts = Collections.newSetFromMap(new IdentityHashMap<>());
 			log.info("Step: cleaning and normalizing {} contacts for account '{}'", entries.size(), account.name());
 			for (AddressBookEntry entry : entries) {
 				VCard vcard = parse(entry);
@@ -199,8 +196,8 @@ public class ContactsCleanupService {
 			int deleted = 0;
 			int written = 0;
 			List<VCard> survivingContacts = new ArrayList<>();
-			log.info("Step: writing cleanup changes for {} contacts in batches of 100 for account '{}'", vcards.size(),
-					account.name());
+			log.info("Step: writing cleanup changes for {} contacts of account '{}' (progress every {} contacts)",
+					vcards.size(), account.name(), PROGRESS_INTERVAL);
 			for (int i = 0; i < vcards.size(); i++) {
 				VCard vcard = vcards.get(i);
 				AddressBookEntry entry = parsedEntries.get(i);
@@ -221,7 +218,7 @@ public class ContactsCleanupService {
 					survivingContacts.add(vcard);
 				}
 				written++;
-				if (written % 100 == 0) {
+				if (written % PROGRESS_INTERVAL == 0) {
 					log.info(
 							"Cleanup write progress for account '{}': {} of {} processed ({} remaining); {} updated, {} deleted",
 							account.name(), written, vcards.size(), vcards.size() - written, updated, deleted);
@@ -253,34 +250,24 @@ public class ContactsCleanupService {
 				: ex.getClass().getSimpleName();
 	}
 
-	private boolean importsOtherContacts(GoogleAccount account) {
-		if (!account.importOtherContacts()) {
+	/** People API passes are opt-in per account and never write during a dry run. */
+	private boolean runsPeopleApiPass(GoogleAccount account, boolean enabled, String pass) {
+		if (!enabled) {
 			return false;
 		}
 		if (account.dryRun()) {
-			log.info("[dry run] Skipping Other contacts import for account '{}'", account.name());
+			log.info("[dry run] Skipping {} for account '{}'", pass, account.name());
 			return false;
 		}
+		log.info("Step: {} for account '{}'", pass, account.name());
 		return true;
 	}
 
 	private OtherContactsImportResult importOtherContacts(GoogleAccount account, List<AddressBookEntry> entries) {
-		OtherContactsImportResult result = otherContactsClient.importOtherContacts(account, existingEmails(entries),
-				existingPhones(entries));
+		OtherContactsImportResult result = otherContactsClient.importOtherContacts(account, identifiersOf(entries));
 		log.info("Other contacts import for account '{}': {} discovered, {} promoted, {} skipped, {} failed",
 				account.name(), result.discovered(), result.promoted(), result.skipped(), result.failed());
 		return result;
-	}
-
-	private boolean prefersGoogleProfilePhotos(GoogleAccount account) {
-		if (!account.preferGoogleProfilePhotos()) {
-			return false;
-		}
-		if (account.dryRun()) {
-			log.info("[dry run] Skipping Google profile photo preference for account '{}'", account.name());
-			return false;
-		}
-		return true;
 	}
 
 	private GoogleProfilePhotoResult preferGoogleProfilePhotos(GoogleAccount account) {
@@ -292,17 +279,6 @@ public class ContactsCleanupService {
 		return result;
 	}
 
-	private boolean repairsGoogleContactDisplayNames(GoogleAccount account) {
-		if (!account.repairGoogleContactDisplayNames()) {
-			return false;
-		}
-		if (account.dryRun()) {
-			log.info("[dry run] Skipping Google contact-name repair for account '{}'", account.name());
-			return false;
-		}
-		return true;
-	}
-
 	private GoogleContactNameResult repairGoogleContactDisplayNames(GoogleAccount account) {
 		GoogleContactNameResult result = contactNameClient.repairCommaFormattedContactNames(account);
 		log.info("Google contact-name repair for account '{}': {} scanned, {} updated, {} skipped, {} failed",
@@ -310,45 +286,22 @@ public class ContactsCleanupService {
 		return result;
 	}
 
-	private Set<String> existingEmails(List<AddressBookEntry> entries) {
-		Set<String> emails = new HashSet<>();
+	/**
+	 * Indexes the address book in a single parsing pass so the importer can skip Other
+	 * contacts that already exist. Normalization is owned by {@link ContactIdentifiers},
+	 * which the People API client uses for the other side of the comparison.
+	 */
+	private ContactIdentifiers identifiersOf(List<AddressBookEntry> entries) {
+		List<String> emails = new ArrayList<>();
+		List<String> phones = new ArrayList<>();
 		for (AddressBookEntry entry : entries) {
 			VCard vcard = Ezvcard.parse(entry.vcard()).first();
 			if (vcard != null) {
-				vcard.getEmails()
-					.stream()
-					.map(Email::getValue)
-					.map(this::normalizeEmail)
-					.filter((value) -> !value.isEmpty())
-					.forEach(emails::add);
+				vcard.getEmails().forEach((email) -> emails.add(email.getValue()));
+				vcard.getTelephoneNumbers().forEach((telephone) -> phones.add(telephone.getText()));
 			}
 		}
-		return emails;
-	}
-
-	private Set<String> existingPhones(List<AddressBookEntry> entries) {
-		Set<String> phones = new HashSet<>();
-		for (AddressBookEntry entry : entries) {
-			VCard vcard = Ezvcard.parse(entry.vcard()).first();
-			if (vcard != null) {
-				vcard.getTelephoneNumbers()
-					.stream()
-					.map(Telephone::getText)
-					.map(this::normalizePhone)
-					.filter((value) -> !value.isEmpty())
-					.forEach(phones::add);
-			}
-		}
-		return phones;
-	}
-
-	private String normalizeEmail(String value) {
-		return (value != null) ? value.trim().toLowerCase(Locale.ROOT) : "";
-	}
-
-	private String normalizePhone(String value) {
-		String digits = (value != null) ? value.replaceAll("\\D", "") : "";
-		return digits.startsWith("00") ? digits.substring(2) : digits;
+		return ContactIdentifiers.of(emails, phones);
 	}
 
 	/** Computes the before/after property diff of a changed contact. */
