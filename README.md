@@ -115,7 +115,7 @@ Safety first:
 | Wrapping-name quote removal | `"Jane Doe"` → `Jane Doe`; can be disabled independently | ✅ on |
 | Comma-formatted name repair | `Muster, Max` → `Max Muster`; can be disabled independently | ✅ on |
 | Label normalization | custom e-mail/phone/address labels → standard types: `Geschäftlich` → `WORK`, `Mobil` → `CELL`, `Internet email`/`WhatsApp`/`Obsolete` → default | ✅ on |
-| Empty property removal | `EMAIL:`, `ORG:;;`, all-blank `ADR` → dropped | ✅ on |
+| Empty property removal | `EMAIL:`, `ORG:;;`, blank/duplicate `X-` props; `ADR` without street, PO box, region or postal code (a bare `Zurich, Switzerland` cannot be mailed to) → dropped | ✅ on |
 | Duplicate **contact** detection | two cards sharing a phone/e-mail, near-identical or word-flipped names → **reported, not touched** (merge them with Google's own "Merge & fix") | ✅ on (report-only) |
 | Flipped-name repair | `given=Muster, family=Max` + e-mail `max.muster@…` → names swapped (only with e-mail evidence, never guessed) | ✅ on |
 | Birthday extraction | note `Geburtstag: 12.03.1980` → proper `BDAY` field (existing birthdays never overwritten) | ✅ on |
@@ -231,8 +231,11 @@ Keep the default one-shot mode and let the host trigger it:
 # Unit tests only
 ./mvnw test
 
-# Full verify: formatting, tests, architecture rules, SpotBugs, JaCoCo coverage
+# Full verify: formatting, tests, architecture rules, SpotBugs, JaCoCo coverage gate
 ./mvnw verify
+
+# Dependency vulnerability scan (slow without an NVD API key)
+./mvnw dependency-check:check -DnvdApiKey=<key>
 
 # Auto-format before committing
 ./mvnw spring-javaformat:apply
@@ -324,11 +327,12 @@ OAuth configuration is ready.
 | `CONTACTS_CLEANER_REMOVE_WRAPPING_NAME_QUOTES` | `true` | Remove quote characters that wrap a name |
 | `CONTACTS_CLEANER_REPAIR_COMMA_FORMATTED_NAMES` | `true` | Rewrite unambiguous `Last, First` display names to `First Last` |
 | `CONTACTS_CLEANER_NORMALIZE_LABELS` | `true` | Custom e-mail/address labels → standard vCard types |
-| `CONTACTS_CLEANER_REMOVE_EMPTY_PROPERTIES` | `true` | Drop blank `TEL`/`EMAIL`/`URL`/`NOTE`, all-blank `ORG`/`ADR` |
+| `CONTACTS_CLEANER_REMOVE_EMPTY_PROPERTIES` | `true` | Drop blank `TEL`/`EMAIL`/`URL`/`NOTE`, all-blank `ORG`, and `ADR` entries with only a city and/or country |
 | `CONTACTS_CLEANER_DETECT_DUPLICATE_CONTACTS` | `true` | Report-only: log likely duplicate contact pairs |
 | `CONTACTS_CLEANER_REPAIR_FLIPPED_NAMES` | `true` | Swap given/family when the contact's e-mail proves the order |
 | `CONTACTS_CLEANER_EXTRACT_BIRTHDAYS` | `true` | Promote keyword-tagged note birthdays to `BDAY` |
 | `CONTACTS_CLEANER_REMOVE_SOCIAL_NETWORK_NOTES` | `true` | Strip XING/LinkedIn sync lines from notes |
+| `CONTACTS_CLEANER_CLEAN_URLS` | `true` | Drop dead/unwanted service URLs, trim and deduplicate the rest |
 | `CONTACTS_CLEANER_REMOVE_INVALID_EMAILS` | `true` | Drop syntactically broken e-mail addresses |
 | `CONTACTS_CLEANER_REMOVE_INVALID_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop numbers invalid for their country |
 | `CONTACTS_CLEANER_REMOVE_FAX_NUMBERS` | `false` | ⚠️ Destructive — drop work/home fax numbers |
@@ -343,7 +347,7 @@ OAuth configuration is ready.
 | `CONTACTS_CLEANER_CANONICALIZE_ORGANIZATIONS` | `true` | Unify company spellings (majority wins) |
 | `CONTACTS_CLEANER_VERIFY_EMAIL_DOMAINS` | `false` | ⚠️ DNS check — drop addresses of dead domains |
 | `CONTACTS_CLEANER_REMOVE_SHARED_PHONE_NUMBERS` | `false` | ⚠️ Destructive — drop switchboard numbers |
-| `CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD` | `2` | Contacts sharing a number before it is removed (3 keeps couples' landlines) |
+| `CONTACTS_CLEANER_SHARED_PHONE_NUMBER_THRESHOLD` | `2` | Contacts sharing a number before it is removed; minimum `2`, raise to `3` to keep couples' landlines |
 | `CONTACTS_CLEANER_REMOVE_NOTES` | `false` | ⚠️ Destructive — delete notes |
 | `CONTACTS_CLEANER_DELETE_EMPTY_CONTACTS` | `false` | ⚠️ Destructive — delete contacts without any information |
 | `CONTACTS_CLEANER_DELETE_BIRTHDAY_ONLY_CONTACTS` | `false` | ⚠️ Destructive — delete contacts with only a birthday and name |
@@ -357,6 +361,14 @@ OAuth configuration is ready.
 | `CONTACTS_CLEANER_SCHEDULER_ZONE` | `Europe/Zurich` | Timezone for the cron |
 | `CONTACTS_CLEANER_STARTUP_RUN_ENABLED` | `true` (`false` in server) | One-shot run at boot |
 
+### HTML report
+
+| Variable | Default | Description |
+|---|---|---|
+| `CONTACTS_CLEANER_REPORT_ENABLED` | `true` | Write the single-page HTML report after each run |
+| `CONTACTS_CLEANER_REPORT_DIRECTORY` | `reports` | Where the report files are written (created if missing) |
+| `CONTACTS_CLEANER_REPORT_RETAIN` | `30` | Timestamped reports to keep (minimum `1`); `…-latest.html` is never pruned |
+
 ---
 
 ## HTML report
@@ -366,6 +378,10 @@ After every run a **self-contained single-page HTML report** is written to
 account, red/green before/after diff per contact, update and deletion badges, the
 duplicate-candidate list, and a live filter box. Run with `dry-run: true`, open the
 report, review every change visually — then go live.
+
+The newest `CONTACTS_CLEANER_REPORT_RETAIN` timestamped reports are kept (default 30,
+minimum 1) and older ones are deleted after each run, so a nightly server-mode
+container cannot fill its volume. `cleanup-report-latest.html` is never pruned.
 
 ---
 
@@ -385,8 +401,15 @@ orchestration ──► account
 ```
 
 Quality gates wired into `./mvnw verify`: Spring Java Format, JUnit 5 + Mockito +
-AssertJ, JaCoCo coverage, SpotBugs + FindSecBugs, OWASP dependency-check (release
-pipeline), PIT mutation testing, CycloneDX SBOM, and reproducible sorted POMs.
+AssertJ, a JaCoCo coverage gate (`jacoco:check`, 90 % line / 76 % branch — the build
+fails below it), SpotBugs + FindSecBugs, CycloneDX SBOM, and reproducible sorted POMs.
+PIT mutation testing runs on demand (`./mvnw pitest:mutationCoverage`).
+
+Security scanning lives outside the pull-request path so an upstream CVE never turns
+an unrelated PR red: [CodeQL](.github/workflows/codeql.yml) analyzes every push and
+pull request, and the weekly [security workflow](.github/workflows/security.yml) runs
+OWASP dependency-check against `main`, failing on CVSS ≥ 7.
+
 Deployment artifacts are GraalVM **native images** built with Paketo buildpacks —
 startup in milliseconds, ~50 MB RSS.
 

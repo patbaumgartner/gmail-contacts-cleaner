@@ -4,6 +4,55 @@ All notable changes to this project are documented in this file. The format is b
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `contacts-cleaner.report.retain` (`CONTACTS_CLEANER_REPORT_RETAIN`, default `30`):
+  keeps only the newest timestamped HTML reports so a nightly server-mode container
+  cannot fill its volume. `cleanup-report-latest.html` is never pruned
+- `CONTACTS_CLEANER_CLEAN_URLS` — the dead-service URL cleanup was the only rule
+  without an environment variable
+- **Scheduled security workflow** running OWASP dependency-check weekly against
+  `main`, and **CodeQL** analysis on every push and pull request
+
+### Fixed
+
+- Account names no longer render as a literal `%s` in `GoogleAccount.toString()` and
+  in both People API credential errors — `"literal " + "literal".formatted(args)` binds
+  `formatted` to the last literal only
+- A cleanup run that fails while `dry-run` is enabled is now reported as a dry run in
+  the log summary and the HTML report instead of as a live run
+- Failures without a message (e.g. `NullPointerException`) report the exception type
+  instead of an empty status message
+- `shared-phone-number-threshold` is validated (`minimum 2`): a threshold of `1` means
+  "every number is shared" and would have deleted every phone number of every contact
+  once the opt-in rule was enabled
+
+### Changed
+
+- `CleaningProperties` and `GoogleAccount` are now built through named builders. The
+  six `withX(...)` copy methods, three telescoping constructors and the positional
+  38-argument construction they replaced made a misplaced boolean invisible
+- Contact-identifier normalization moved into `ContactIdentifiers` in the `peopleapi`
+  module. The orchestration and the People API client previously kept private copies
+  of the same rules — if they drifted, the "already in My Contacts" check would have
+  silently stopped matching. Enabling the importer also parsed the whole address book
+  twice; it is now a single pass
+- `ContactCleaner.clean()` returns a `boolean`; the removed `CleaningResult.empty` was
+  never read and duplicated a check the orchestration deliberately performs later
+- Empty-property removal now documents that it drops `ADR` entries whose only content
+  is a city and/or country (unchanged behavior, previously undocumented)
+
+### Build
+
+- `jacoco:check` is bound to `verify`, so the declared coverage thresholds are actually
+  enforced (raised to 90 % line / 76 % branch); they were dead properties before
+- CI no longer passes `-Dmaven.test.failure.ignore=true`, which delegated the entire
+  pass/fail decision to a third-party reporting action
+- `failBuildOnCVSS` lowered from `10` (unreachable — only a perfect 10.0 would fail) to
+  `7`, now that dependency-check has a workflow that runs it
+
 ## [1.0.0] - 2026-07-20
 
 Initial release — the spiritual successor of gcontacts-cleaner, rebuilt for today's Google.
