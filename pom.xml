@@ -73,12 +73,11 @@
     <pitest.mutation.threshold>0</pitest.mutation.threshold>
 
     <!--
-      NVD API key used by OWASP dependency-check. Override via:
+      NVD API key used by OWASP dependency-check. Supply it with:
         - command line: -DnvdApiKey=...
-        - environment variable: NVD_API_KEY (Maven exposes env vars as ${env.NVD_API_KEY})
-      Empty by default so the build does not leak credentials and runs without a key (slower).
+      Omit the property entirely when no key is available so dependency-check uses
+      its unauthenticated API mode.
     -->
-    <nvdApiKey></nvdApiKey>
   </properties>
 
   <dependencyManagement>

@@ -49,7 +49,12 @@ jobs:
           restore-keys: dependency-check-data-
 
       - name: Run dependency-check
-        run: ./mvnw -B -ntp dependency-check:check -DnvdApiKey="$NVD_API_KEY"
+        run: |
+          if [[ -n "$NVD_API_KEY" ]]; then
+            ./mvnw -B -ntp dependency-check:check -DnvdApiKey="$NVD_API_KEY"
+          else
+            ./mvnw -B -ntp dependency-check:check
+          fi
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
