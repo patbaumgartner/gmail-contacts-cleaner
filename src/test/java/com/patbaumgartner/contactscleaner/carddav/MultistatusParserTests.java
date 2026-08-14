@@ -85,6 +85,32 @@ class MultistatusParserTests {
 	}
 
 	@Test
+	void skipsVcardResourcesWithoutAnEtag() {
+		String multistatusWithoutEtag = """
+				<?xml version="1.0" encoding="UTF-8"?>
+				<d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">
+				  <d:response>
+				    <d:href>/carddav/v1/principals/jane.doe%40gmail.com/lists/default/abc123</d:href>
+				    <d:propstat>
+				      <d:status>HTTP/1.1 200 OK</d:status>
+				      <d:prop><card:address-data>BEGIN:VCARD
+				VERSION:3.0
+				FN:Jane Doe
+				END:VCARD</card:address-data></d:prop>
+				    </d:propstat>
+				  </d:response>
+				</d:multistatus>
+				""";
+
+		assertThat(parser.parse(multistatusWithoutEtag)).isEmpty();
+	}
+
+	@Test
+	void skipsVcardResourcesWithAWildcardEtag() {
+		assertThat(parser.parse(MULTISTATUS.replace("\"2011-03-01T10:00:00.000-08:00\"", "*"))).isEmpty();
+	}
+
+	@Test
 	void rejectsMalformedXml() {
 		assertThatExceptionOfType(CardDavException.class).isThrownBy(() -> parser.parse("this is not XML"))
 			.withMessageContaining("multistatus");
