@@ -48,15 +48,15 @@ jobs:
           key: dependency-check-data-${{ github.run_id }}
           restore-keys: dependency-check-data-
 
-      - name: Run dependency-check with NVD API key
-        if: ${{ secrets.NVD_API_KEY != '' }}
-        run: ./mvnw -B -ntp dependency-check:check -DnvdApiKey="$NVD_API_KEY"
+      - name: Run dependency-check
+        run: |
+          if [[ -n "$NVD_API_KEY_VALUE" ]]; then
+            ./mvnw -B -ntp dependency-check:check -DnvdApiKey="$NVD_API_KEY_VALUE"
+          else
+            ./mvnw -B -ntp dependency-check:check
+          fi
         env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-
-      - name: Run dependency-check without NVD API key
-        if: ${{ secrets.NVD_API_KEY == '' }}
-        run: ./mvnw -B -ntp dependency-check:check
+          NVD_API_KEY_VALUE: ${{ secrets.NVD_API_KEY }}
 
       - name: Upload reports
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
