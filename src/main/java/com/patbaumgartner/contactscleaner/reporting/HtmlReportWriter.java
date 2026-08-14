@@ -79,20 +79,28 @@ public class HtmlReportWriter {
 	private void pruneOldReports(Path directory) throws IOException {
 		List<Path> timestamped;
 		try (Stream<Path> files = Files.list(directory)) {
-			timestamped = files.filter((file) -> file.getFileName().toString().startsWith(TIMESTAMPED_PREFIX))
-				.filter((file) -> !file.getFileName().toString().equals(LATEST_REPORT))
-				.sorted(Comparator.comparing((Path file) -> file.getFileName().toString()).reversed())
+			timestamped = files.filter((file) -> isTimestampedReport(fileNameOf(file)))
+				.sorted(Comparator.comparing(HtmlReportWriter::fileNameOf).reversed())
 				.toList();
 		}
 		for (Path outdated : timestamped.stream().skip(this.properties.retain()).toList()) {
 			try {
 				Files.delete(outdated);
-				log.debug("Deleted outdated report {}", outdated.getFileName());
+				log.debug("Deleted outdated report {}", fileNameOf(outdated));
 			}
 			catch (IOException ex) {
-				log.warn("Could not delete outdated report {}", outdated.getFileName(), ex);
+				log.warn("Could not delete outdated report {}", fileNameOf(outdated), ex);
 			}
 		}
+	}
+
+	private static boolean isTimestampedReport(String fileName) {
+		return fileName.startsWith(TIMESTAMPED_PREFIX) && !fileName.equals(LATEST_REPORT);
+	}
+
+	private static String fileNameOf(Path file) {
+		Path fileName = file.getFileName();
+		return (fileName != null) ? fileName.toString() : "";
 	}
 
 	private String render(CleanupRunCompleted event) {
