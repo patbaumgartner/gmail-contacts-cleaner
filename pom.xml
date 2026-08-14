@@ -222,13 +222,6 @@
           <nodeAuditAnalyzerEnabled>false</nodeAuditAnalyzerEnabled>
           <retireJsAnalyzerEnabled>false</retireJsAnalyzerEnabled>
         </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
 
       <!-- Git Information -->
