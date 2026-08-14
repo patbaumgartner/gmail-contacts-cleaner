@@ -206,6 +206,26 @@ class GoogleCardDavClientTests {
 	}
 
 	@Test
+	void refusesToUpdateAContactWithoutAnEtag() {
+		AddressBookEntry entry = new AddressBookEntry(
+				"/carddav/v1/principals/jane.doe%40gmail.com/lists/default/abc123", null, "irrelevant");
+
+		assertThatExceptionOfType(CardDavException.class)
+			.isThrownBy(() -> this.client.updateContact(ACCOUNT, entry, "BEGIN:VCARD\r\nEND:VCARD\r\n"))
+			.withMessageContaining("without an etag");
+	}
+
+	@Test
+	void refusesToUpdateAContactWithAWildcardEtag() {
+		AddressBookEntry entry = new AddressBookEntry(
+				"/carddav/v1/principals/jane.doe%40gmail.com/lists/default/abc123", "*", "irrelevant");
+
+		assertThatExceptionOfType(CardDavException.class)
+			.isThrownBy(() -> this.client.updateContact(ACCOUNT, entry, "BEGIN:VCARD\r\nEND:VCARD\r\n"))
+			.withMessageContaining("without an etag");
+	}
+
+	@Test
 	void deletesContactWithEtagGuard() {
 		this.server.expect(requestTo("/carddav/v1/principals/jane.doe%40gmail.com/lists/default/abc123"))
 			.andExpect(method(HttpMethod.DELETE))

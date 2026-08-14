@@ -22,9 +22,9 @@ import org.springframework.stereotype.Component;
  * {@code addressbook-query} REPORT (RFC 6352) into {@link AddressBookEntry} instances.
  *
  * <p>
- * Only {@code response} elements with an HTTP {@code 200} propstat status and a non-empty
- * {@code address-data} property are returned; collection resources and partial errors are
- * skipped.
+ * Only {@code response} elements with an HTTP {@code 200} propstat status, non-empty
+ * {@code address-data}, and an etag are returned; collection resources and partial errors
+ * are skipped. An etag is required so every later mutation remains conditional.
  */
 @Component
 class MultistatusParser {
@@ -49,7 +49,7 @@ class MultistatusParser {
 			String href = textOf(response, DAV_NS, "href");
 			String etag = textOf(response, DAV_NS, "getetag");
 			String vcard = textOf(response, CARDDAV_NS, "address-data");
-			if (href != null && vcard != null && !vcard.isBlank()) {
+			if (href != null && !href.isBlank() && isUsableEtag(etag) && vcard != null && !vcard.isBlank()) {
 				entries.add(new AddressBookEntry(href, etag, vcard));
 			}
 		}
@@ -73,7 +73,7 @@ class MultistatusParser {
 			Element response = (Element) responses.item(i);
 			String href = textOf(response, DAV_NS, "href");
 			String etag = textOf(response, DAV_NS, "getetag");
-			if (href != null && !href.isBlank() && !href.trim().endsWith("/") && etag != null && !etag.isBlank()) {
+			if (href != null && !href.isBlank() && !href.trim().endsWith("/") && isUsableEtag(etag)) {
 				refs.add(new AddressBookEntry(href.trim(), etag, null));
 			}
 		}
@@ -99,6 +99,10 @@ class MultistatusParser {
 	private String textOf(Element parent, String namespace, String localName) {
 		NodeList nodes = parent.getElementsByTagNameNS(namespace, localName);
 		return (nodes.getLength() > 0) ? nodes.item(0).getTextContent() : null;
+	}
+
+	private boolean isUsableEtag(String etag) {
+		return etag != null && !etag.isBlank() && !etag.trim().equals("*");
 	}
 
 }

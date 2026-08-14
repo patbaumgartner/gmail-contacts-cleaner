@@ -210,9 +210,10 @@ class GoogleCardDavClient implements CardDavClient {
 	}
 
 	private void conditional(HttpHeaders headers, AddressBookEntry entry) {
-		if (entry.etag() != null && !entry.etag().isBlank()) {
-			headers.setIfMatch(entry.etag());
+		if (entry.etag() == null || entry.etag().isBlank() || entry.etag().trim().equals("*")) {
+			throw new CardDavException("Refusing to mutate a contact without an etag");
 		}
+		headers.setIfMatch(entry.etag());
 	}
 
 	/**
