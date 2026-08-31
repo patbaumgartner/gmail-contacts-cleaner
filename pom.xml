@@ -38,7 +38,7 @@
     <java.version>25</java.version>
 
     <!-- External Library Versions -->
-    <spring-modulith.version>2.1.0</spring-modulith.version>
+    <spring-modulith.version>2.1.1</spring-modulith.version>
     <ez-vcard.version>0.12.2</ez-vcard.version>
     <libphonenumber.version>9.0.38</libphonenumber.version>
     <taikai.version>1.66.0</taikai.version>
