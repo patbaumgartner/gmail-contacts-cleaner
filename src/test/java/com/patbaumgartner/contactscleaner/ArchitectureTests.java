@@ -1,5 +1,6 @@
 package com.patbaumgartner.contactscleaner;
 
+import com.enofex.taikai.ClassCriteria;
 import com.enofex.taikai.Taikai;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +21,8 @@ class ArchitectureTests {
 				.classesShouldImplementHashCodeAndEquals()
 				.methodsShouldNotDeclareGenericExceptions()
 				.fieldsShouldNotBePublic()
-				.imports((imports) -> imports.shouldHaveNoCycles().shouldNotImport("..shaded.."))
+				.imports((imports) -> imports.shouldHaveNoCycles()
+					.shouldNotImport(ClassCriteria.inPackage("..shaded..")))
 				.naming((naming) -> naming.classesShouldNotMatch(".*Impl").interfacesShouldNotHavePrefixI()))
 			.logging((logging) -> logging.loggersShouldFollowConventions(org.slf4j.Logger.class, "log|logger"))
 			.spring((spring) -> spring.noAutowiredFields()
