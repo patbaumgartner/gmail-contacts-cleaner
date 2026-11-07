@@ -76,15 +76,24 @@ final class BirthdayExtractionRule implements VCardCleaningRule {
 	Optional<LocalDate> extract(String text) {
 		Matcher dayFirst = DAY_FIRST.matcher(text);
 		if (dayFirst.find()) {
-			return plausibleDate(Integer.parseInt(dayFirst.group(3)), Integer.parseInt(dayFirst.group(2)),
-					Integer.parseInt(dayFirst.group(1)));
+			return plausibleDate(parseIntSafe(dayFirst.group(3)), parseIntSafe(dayFirst.group(2)),
+					parseIntSafe(dayFirst.group(1)));
 		}
 		Matcher iso = ISO.matcher(text);
 		if (iso.find()) {
-			return plausibleDate(Integer.parseInt(iso.group(1)), Integer.parseInt(iso.group(2)),
-					Integer.parseInt(iso.group(3)));
+			return plausibleDate(parseIntSafe(iso.group(1)), parseIntSafe(iso.group(2)),
+					parseIntSafe(iso.group(3)));
 		}
 		return Optional.empty();
+	}
+
+	private int parseIntSafe(String value) {
+		try {
+			return Integer.parseInt(value);
+		}
+		catch (NumberFormatException e) {
+			return -1;
+		}
 	}
 
 	private Optional<LocalDate> plausibleDate(int year, int month, int day) {
