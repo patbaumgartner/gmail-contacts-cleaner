@@ -81,8 +81,7 @@ final class BirthdayExtractionRule implements VCardCleaningRule {
 		}
 		Matcher iso = ISO.matcher(text);
 		if (iso.find()) {
-			return plausibleDate(parseIntSafe(iso.group(1)), parseIntSafe(iso.group(2)),
-					parseIntSafe(iso.group(3)));
+			return plausibleDate(parseIntSafe(iso.group(1)), parseIntSafe(iso.group(2)), parseIntSafe(iso.group(3)));
 		}
 		return Optional.empty();
 	}
